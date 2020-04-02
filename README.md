@@ -12,7 +12,7 @@ The program is broken into 3 parts
 
 [whitakers_words.py](whitakers_words.py): has a class which will load the whitakers words lexicon from DICTLINE, INFLECTS, ADDONS, and UNIQUES. It also includes classes which will format the result from the query in roughly the same style as the original Whitaker's Words
 
-[dictionary_compiler.py](dictionary_compiler.py): This produces the compiled dictionary files. **Execute this script before running any other part of this program.** It takes [lat.ls.perseus-eng2.xml](DataFiles/lat.ls.perseus-eng2.xml), the Lewis and Short Dictionary, and combines in with [DICTLINE.txt](DataFiles/DICTLINE.txt), the Whitaker's Words Dictionary, to produce a file DataFiles/JOINED.txt, which is a json file.
+[dictionary_compiler.py](dictionary_compiler.py): This produces the compiled dictionary files. **Execute this script before running any other part of this program.** It takes [lat.ls.perseus-eng2.xml](DataFiles/lewis_and_short.xml), the Lewis and Short Dictionary, and combines in with [DICTLINE.txt](DataFiles/DICTLINE.txt), the Whitaker's Words Dictionary, to produce a file DataFiles/JOINED.txt, which is a json file.
 
 [joined_formater_html.py](joined_formater_html.py): this loads the JOINED.txt file and formats the results of querys in a more readable html format.
 
