@@ -1,7 +1,7 @@
 from typing import Tuple, Optional, Any
 import xml.etree.ElementTree as ET
-from QuickLatin.entry_and_inflections import *
-from QuickLatin.whitakers_words import WW_LEXICON, WW_FORMATER
+from PyWhitakersWords.entry_and_inflections import *
+from PyWhitakersWords.whitakers_words import WW_LEXICON, WW_FORMATER
 import json
 
 

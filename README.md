@@ -12,7 +12,7 @@ The program is broken into 3 parts
 
 [whitakers_words.py](whitakers_words.py): has a class which will load the whitakers words lexicon from DICTLINE, INFLECTS, ADDONS, and UNIQUES. It also includes classes which will format the result from the query in roughly the same style as the original Whitaker's Words
 
-[lewis_and_short_joined_extracter.py](lewis_and_short_joined_extracter.py): takes [lat.ls.perseus-eng2.xml](DataFiles/lat.ls.perseus-eng2.xml), the Lewis and Short Dictionary, and combines in with [DICTLINE.txt](DataFiles/DICTLINE.txt), the Whitaker's Words Dictionary, to produce a file DataFiles/JOINED.txt, which is a json file. This stand alone script must be run before and formater which uses the combined dictionary (namely, [joined_formater_html.py](joined_formater_html.py))
+[dictionary_compiler.py](dictionary_compiler.py): This produces the compiled dictionary files. **Execute this script before running any other part of this program.** It takes [lat.ls.perseus-eng2.xml](DataFiles/lat.ls.perseus-eng2.xml), the Lewis and Short Dictionary, and combines in with [DICTLINE.txt](DataFiles/DICTLINE.txt), the Whitaker's Words Dictionary, to produce a file DataFiles/JOINED.txt, which is a json file.
 
 [joined_formater_html.py](joined_formater_html.py): this loads the JOINED.txt file and formats the results of querys in a more readable html format.
 
@@ -21,7 +21,7 @@ The program is broken into 3 parts
 This primarily consist of the files [entry_and_inflections.py](entry_and_inflections.py) and [searcher.py](searcher.py).
 
 ##### entry_and_inflections.py
-1. _DictionaryLemma_: This stores one 'meaning' from a dictionary. A DictionaryLemma can have one or more _DictionaryKey_ instances connected to it. This might happen if a verb has one main set of stems, but has a secondary set of stems. For example, amo, amare is usually amavero in the future perfect, but can also be amasso. Each DictionaryKey has up to 4 stems, a part of speach, and some additional data assosiated with that part of speach (e.g. for a Noun, the declention, gender, etc.)
+1. _DictionaryLemma_: This stores one 'meaning' from a dictionary. A DictionaryLemma can have one or more _DictionaryKey_ instances connected to it. This might happen if a verb has one main set of stems, but has a secondary set of stems. For example, _amo_, _amare_ is usually _amavero_ in the future perfect, but can also be _amasso_. Each DictionaryKey has up to 4 stems, a part of speach, and some additional data assosiated with that part of speach (e.g. for a Noun, the declention, gender, etc.)
 
 2. _InflectionRule_: This stores one inflection that can be applied to a _DictionaryKey_ to form a word. Each InflectionRule has a 'ending', a part of speach, a stem index, and some additional data assosiated with that part of speach (e.g. for a Noun, the declention, gender, etc.) to determine which kinds of word it applies to.  
 
