@@ -779,7 +779,7 @@ def parse_entry(ent) -> Optional['Entry']:
     return Entry.unknown(ent)
 
 def get_ls_ents():
-    with open('/home/henry/Desktop/latin_website/QuickLatin/DataFiles/lat.ls.perseus-eng2.xml') as f:
+    with open('/home/henry/Desktop/latin_website/PyWhitakersWords/DataFiles/lewis_and_short.xml') as f:
         s = strip_spec_chars(f.read())
 
 
@@ -852,44 +852,22 @@ for _, ents in ENT_DIC.items():
 ND = list(ND)
 ND.sort(key=lambda x: x.dictionary_keys[0].stems[0] if x.dictionary_keys[0].stems[0] is not None else "zzz")
 
-with open("/home/henry/Desktop/latin_website/QuickLatin/DataFiles/JOINED.txt", "w", encoding='utf-8') as o:
+with open("/home/henry/Desktop/latin_website/PyWhitakersWords/GeneratedFiles/JOINED.txt", "w", encoding='utf-8') as o:
     json.dump([n.to_dict() for n in ND], o, indent=1)
 
-# with open("/home/henry/Desktop/latin_website/QuickLatin/DataFiles/JOINED.txt", "w", encoding='utf-8') as o:
-#     for v in ND:
-#         if isinstance(v, tuple):
-#             header, ent = v
-#             # o.write(ent.key_word+" : ")
-#             o.write(pad_to_len(header, 110+6*4))
-#             o.write(" &&&--&&& ")
-#             o.write("")
-#             o.write(" &&&--&&& ")
-#             o.write(ent.extract_html().replace("\n", " "))
-#             o.write("\n")
-#         else:
-#             dic = v
-#             # o.write(WW_FORMATER.dictionary_keyword(dic)+(" > " if not hasattr(dic, "ent") else "+++"))
-#             o.write(pad_to_len(dic.line[:19]       + "      " +
-#                                dic.line[19:19*2]   + "      " +
-#                                dic.line[19*2:19*3] + "      " +
-#                                dic.line[19*3:19*4] + "      " +
-#                                dic.line[19*4:110], 110+6*4))
-#             o.write(" &&&--&&& ")
-#             o.write("\\n".join(dic.definition.lines))
-#             o.write(" &&&--&&& ")
-#             if hasattr(dic, "ent"):
-#                 o.write(dic.ent.extract_html().replace("\n", " "))
-#             o.write("\n")
-# print(len(new_dic))
-
+with open("/home/henry/Desktop/latin_website/PyWhitakersWords/GeneratedFiles/JOINED_HEADERS.txt", "w", encoding='utf-8') as o:
+    json.dump([n.to_dict(header=True) for n in ND], o, indent=1)
+#
+# with open("/home/henry/Desktop/latin_website/PyWhitakersWords/GeneratedFiles/JOINED.txt", "w", encoding='utf-8') as o:
+#     json.dump([n.to_dict(def_lookup=True) for n in ND], o, indent=1)
 
 def generate_html_dic():
     l = []
     for e in ls_ents:
         l.extend(e.extract_html())
         l.append("\n")
-    with open("/home/henry/Desktop/latin_website/l_and_s/lewis_and_short_formated.html", "w") as o:
+    with open("/home/henry/Desktop/latin_website/PyWhitakersWords/GeneratedFiles/lewis_and_short_formated.html", "w") as o:
         o.write(HTML_PREFIX_TEMP)
         o.write("".join(l))
         o.write("""</body></html>""")
-# generate_html_dic()
+

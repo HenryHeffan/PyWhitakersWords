@@ -1,10 +1,10 @@
-from QuickLatin.entry_and_inflections import *
-from QuickLatin.searcher import FormGroup, EntryQuery, get_matches
+from PyWhitakersWords.entry_and_inflections import *
+from PyWhitakersWords.searcher import FormGroup, EntryQuery, get_matches
 from typing import Tuple, List
 from abc import abstractmethod
 # from .entry_and_inflections import *
 
-PATH = "/home/henry/Desktop/latin_website/QuickLatin/"
+PATH = "/home/henry/Desktop/latin_website/PyWhitakersWords/"
 
 
 class WWLexicon(Lexicon):
@@ -207,7 +207,7 @@ class WWLexicon(Lexicon):
         self.prefix_list.append(None)
         self.suffix_list.append(None)
         self.tackon_list.append(None)
-        with open(PATH + "DataFiles/ADDONS.LAT", encoding="ISO-8859-1") as ifile:
+        with open(PATH + "DataFiles/ADDONS.txt", encoding="ISO-8859-1") as ifile:
             lines = [line[:-1].split("--")[0] for line in ifile if line.split("--")[0] != ""]
         assert len(lines) % 3 == 0
         while len(lines) > 0:
@@ -225,7 +225,7 @@ class WWLexicon(Lexicon):
 
 
     def load_uniques(self):
-        with open(PATH + "DataFiles/UNIQUES.LAT", encoding="ISO-8859-1") as ifile:
+        with open(PATH + "DataFiles/UNIQUES.txt", encoding="ISO-8859-1") as ifile:
             lines = [line[:-1].split("--")[0] for line in ifile if line.split("--")[0] != ""]
         assert len(lines) % 3 == 0
         while len(lines) > 0:
@@ -1309,10 +1309,10 @@ WW_FORMATER = WWFormater(WW_LEXICON,
                          NumberFormater(WW_LEXICON),
                          PackonFormater(WW_LEXICON))
 
-m = get_matches(WW_LEXICON, "me")
+# m = get_matches(WW_LEXICON, "me")
 # for fg in m.unsyncopated_form_groups:
 #     print([(key.part_of_speach, key.stems, rule.part_of_speach, rule.ending) for key, rule in fg.key_infl_pairs])
-print(WW_FORMATER.display_entry_query(m))
+# print(WW_FORMATER.display_entry_query(m))
 
 
 

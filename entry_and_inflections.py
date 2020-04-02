@@ -1190,13 +1190,13 @@ class DictionaryLemma:
         # formating
         self.index = index
 
-    def to_dict(self) -> Dict:
+    def to_dict(self, header=False) -> Dict:
         return {
             'pos': self.part_of_speach.str_val,
             'keys': [key.to_dict() for key in self.dictionary_keys],
-            'metadata': self.translation_metadata.to_str(),
-            'def': self.definition,
-            'html': self.html_data,
+            'metadata': self.translation_metadata.to_str() if not header else "",
+            'def': self.definition if not header else "",
+            'html': self.html_data if not header else "",
             'index': self.index
         }
 

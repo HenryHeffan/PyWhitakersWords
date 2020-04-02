@@ -1,4 +1,4 @@
-from QuickLatin.entry_and_inflections import *
+from PyWhitakersWords.entry_and_inflections import *
 
 import re
 import enum
