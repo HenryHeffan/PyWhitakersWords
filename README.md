@@ -1,2 +1,2 @@
 # PyWhitakersWords
-A ppython implementation of whitakkers words, with additional tools
+A python implementation of whitakkers words, with additional tools
