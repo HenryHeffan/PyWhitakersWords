@@ -1,5 +1,5 @@
 from PyWhitakersWords.entry_and_inflections import *
-from PyWhitakersWords.whitakers_words import WW_FORMATER
+# from PyWhitakersWords.whitakers_words import WW_FORMATER
 from PyWhitakersWords.searcher import get_matches, FormGroup, EntryQuery
 from typing import List, Tuple, Optional, Dict
 from abc import abstractmethod
@@ -1301,7 +1301,6 @@ def init(path: str) -> Tuple[JoinedLexicon, Formater]:
 # def set_formater(_formater: Formater) -> None:
 #     global formater
 #     formater = _formater
-
 
 # def parse(s) -> str:
 #     m = get_matches(J_LEX, s)
