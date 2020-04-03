@@ -1,8 +1,13 @@
 from typing import Tuple, Optional, Any
 import xml.etree.ElementTree as ET
 from PyWhitakersWords.entry_and_inflections import *
-from PyWhitakersWords.whitakers_words import WW_LEXICON, WW_FORMATER
+from PyWhitakersWords import whitakers_words
 import json
+
+from os import path
+PATH = path.split(__file__)[0] + "/"
+print(PATH)
+WW_LEXICON, WW_FORMATER = whitakers_words.init(PATH)
 
 
 def strip_spec_chars(s):
@@ -779,7 +784,7 @@ def parse_entry(ent) -> Optional['Entry']:
     return Entry.unknown(ent)
 
 def get_ls_ents():
-    with open('/home/henry/Desktop/latin_website/PyWhitakersWords/DataFiles/lewis_and_short.xml') as f:
+    with open(PATH + 'DataFiles/lewis_and_short.xml') as f:
         s = strip_spec_chars(f.read())
 
 
@@ -852,10 +857,10 @@ for _, ents in ENT_DIC.items():
 ND = list(ND)
 ND.sort(key=lambda x: x.dictionary_keys[0].stems[0] if x.dictionary_keys[0].stems[0] is not None else "zzz")
 
-with open("/home/henry/Desktop/latin_website/PyWhitakersWords/GeneratedFiles/JOINED.txt", "w", encoding='utf-8') as o:
+with open(PATH + "/GeneratedFiles/JOINED.txt", "w", encoding='utf-8') as o:
     json.dump([n.to_dict() for n in ND], o, indent=1)
 
-with open("/home/henry/Desktop/latin_website/PyWhitakersWords/GeneratedFiles/JOINED_HEADERS.txt", "w", encoding='utf-8') as o:
+with open(PATH + "/GeneratedFiles/JOINED_HEADERS.txt", "w", encoding='utf-8') as o:
     json.dump([n.to_dict(header=True) for n in ND], o, indent=1)
 #
 # with open("/home/henry/Desktop/latin_website/PyWhitakersWords/GeneratedFiles/JOINED.txt", "w", encoding='utf-8') as o:
@@ -866,7 +871,7 @@ def generate_html_dic():
     for e in ls_ents:
         l.extend(e.extract_html())
         l.append("\n")
-    with open("/home/henry/Desktop/latin_website/PyWhitakersWords/GeneratedFiles/lewis_and_short_formated.html", "w") as o:
+    with open(PATH + "GeneratedFiles/lewis_and_short_formated.html", "w") as o:
         o.write(HTML_PREFIX_TEMP)
         o.write("".join(l))
         o.write("""</body></html>""")

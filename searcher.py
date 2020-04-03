@@ -181,14 +181,16 @@ def group_dic_infl_pairs(matched_dic_key_infl_rule_pairs: List[Tuple[DictionaryK
             for _, form in forms:
                 if not (fake_key, form) in cut_forms:
                     cut_forms.append((fake_key, form))
+            pos = PartOfSpeech.Pronoun if k in {'qu', 'aliqu'} else PartOfSpeech.Packon
             grouped_list.append(FormGroup(DictionaryLemma(
-                PartOfSpeech.Pronoun if k in {'qu', 'aliqu'} else PartOfSpeech.Packon,
+                pos,
                 [fake_key],
                 TranslationMetadata("X X X A O"),
                 "\n".join(defs),
                 "\n".join(htmls),
                 0
             ), cut_forms, prefix, suffix, tackon))
+                # tackon if pos != PartOfSpeech.Packon else None
         else:
             grouped_list.append(FormGroup(lemma, sorted(forms, key=lambda x: x[1].index), prefix, suffix, tackon))
     # print("GROUPED LIST", grouped_list)

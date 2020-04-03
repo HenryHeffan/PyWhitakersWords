@@ -1589,7 +1589,7 @@ class UniqueEntry:
 
 
 class Lexicon(metaclass=ABCMeta):
-    def __init__(self):
+    def __init__(self, path):
         self.inflection_list: List[InflectionRule] = []
         self.dictionary_keys: List[DictionaryKey] = []
         self.dictionary_lemmata: List[DictionaryLemma] = []
@@ -1599,10 +1599,10 @@ class Lexicon(metaclass=ABCMeta):
         self.uniques: Dict[str, UniqueEntry] = {}
         self.map_ending_infls: Dict[str, List[InflectionRule]] = {}
         self.stem_map: Dict[Tuple[PartOfSpeech, int], Dict[str, List[DictionaryKey]]] = {}
-        self.load()
+        self.load(path)
 
     @abstractmethod
-    def load(self) -> None:
+    def load(self, path: str) -> None:
         pass
 
     def get_noun_inflection_rule(self, declention: DeclentionType, declention_varient: DeclentionSubtype, gender: Gender, case: Case, number: Number) -> Optional[InflectionRule]:

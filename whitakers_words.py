@@ -4,15 +4,13 @@ from typing import Tuple, List
 from abc import abstractmethod
 # from .entry_and_inflections import *
 
-PATH = "/home/henry/Desktop/latin_website/PyWhitakersWords/"
-
 
 class WWLexicon(Lexicon):
-    def load(self):
-        self.load_inflections()
-        self.load_dictionary()
-        self.load_addons()
-        self.load_uniques()
+    def load(self, path: str):
+        self.load_inflections(path)
+        self.load_dictionary(path)
+        self.load_addons(path)
+        self.load_uniques(path)
 
     def _add_inflection_rule(self, pos: PartOfSpeech, m, line, index):
         assert m is not None
@@ -36,9 +34,9 @@ class WWLexicon(Lexicon):
         self.inflection_list.append(rule)
         self.map_ending_infls[ending].append(rule)
 
-    def load_inflections(self):
+    def load_inflections(self, path):
         index = 0  # this might be useful to a formater by specifying the order that the entries are in the dictionary
-        with open(PATH + "/DataFiles/INFLECTS.txt", encoding="ISO-8859-1") as ifile:
+        with open(path + "/DataFiles/INFLECTS.txt", encoding="ISO-8859-1") as ifile:
             for line in ifile:
                 line = line.strip().split("--")[0].strip()
                 if line.strip() == "":
@@ -89,7 +87,7 @@ class WWLexicon(Lexicon):
                         self.stem_map[(lemma.part_of_speach, i)][stem] = []
                     self.stem_map[(lemma.part_of_speach, i)][stem].append(key)
 
-    def load_dictionary(self):
+    def load_dictionary(self, path: str):
         def extract_stem_group(_stems: List, pos: PartOfSpeech, word_data) -> StemGroup:
             if pos == PartOfSpeech.Adjective and word_data.adjective_kind == AdjectiveKind.Superlative:
                 _stems[3] = _stems[0]
@@ -111,7 +109,7 @@ class WWLexicon(Lexicon):
 
         index = 0  # this might be useful to a formater by specifying the order that the entries are in the dictionary
 
-        with open(PATH + "/DataFiles/DICTLINE.txt", encoding="ISO-8859-1") as ifile:
+        with open(path + "/DataFiles/DICTLINE.txt", encoding="ISO-8859-1") as ifile:
             last_lemma: Optional[DictionaryLemma] = None
             working_lemma: Optional[DictionaryLemma] = None
             for line in ifile:
@@ -203,11 +201,11 @@ class WWLexicon(Lexicon):
         # Add (sum esse fui). This cant be in the normal dictionary because of the empty 2nd stem
 
 
-    def load_addons(self):
+    def load_addons(self, path: str):
         self.prefix_list.append(None)
         self.suffix_list.append(None)
         self.tackon_list.append(None)
-        with open(PATH + "DataFiles/ADDONS.txt", encoding="ISO-8859-1") as ifile:
+        with open(path + "DataFiles/ADDONS.txt", encoding="ISO-8859-1") as ifile:
             lines = [line[:-1].split("--")[0] for line in ifile if line.split("--")[0] != ""]
         assert len(lines) % 3 == 0
         while len(lines) > 0:
@@ -224,8 +222,8 @@ class WWLexicon(Lexicon):
                 raise ValueError(lines)
 
 
-    def load_uniques(self):
-        with open(PATH + "DataFiles/UNIQUES.txt", encoding="ISO-8859-1") as ifile:
+    def load_uniques(self, path: str):
+        with open(path + "DataFiles/UNIQUES.txt", encoding="ISO-8859-1") as ifile:
             lines = [line[:-1].split("--")[0] for line in ifile if line.split("--")[0] != ""]
         assert len(lines) % 3 == 0
         while len(lines) > 0:
@@ -1295,19 +1293,24 @@ class WWFormater(Formater):
 
         return "".join(output)
 
-
-WW_LEXICON = WWLexicon()
-WW_FORMATER = WWFormater(WW_LEXICON,
-                         NounFormater(WW_LEXICON),
-                         PronounFormater(WW_LEXICON),
-                         VerbFormater(WW_LEXICON),
-                         AdjectiveFormater(WW_LEXICON),
-                         AdverbFormater(WW_LEXICON),
-                         PrepositionFormater(WW_LEXICON),
-                         ConjunctionFormater(WW_LEXICON),
-                         InterjectionFormater(WW_LEXICON),
-                         NumberFormater(WW_LEXICON),
-                         PackonFormater(WW_LEXICON))
+def init(path) -> Tuple[WWLexicon, WWFormater]:
+    WW_LEXICON = WWLexicon(path)
+    WW_FORMATER = WWFormater(WW_LEXICON,
+                             NounFormater(WW_LEXICON),
+                             PronounFormater(WW_LEXICON),
+                             VerbFormater(WW_LEXICON),
+                             AdjectiveFormater(WW_LEXICON),
+                             AdverbFormater(WW_LEXICON),
+                             PrepositionFormater(WW_LEXICON),
+                             ConjunctionFormater(WW_LEXICON),
+                             InterjectionFormater(WW_LEXICON),
+                             NumberFormater(WW_LEXICON),
+                             PackonFormater(WW_LEXICON))
+    return WW_LEXICON, WW_FORMATER
+#
+# def parse(WWLexicon, WWFormater, s) -> str:
+#     m = get_matches(WW_LEXICON, s)
+#     return WW_FORMATER.display_entry_query(m)
 
 # m = get_matches(WW_LEXICON, "me")
 # for fg in m.unsyncopated_form_groups:

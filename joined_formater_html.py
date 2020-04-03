@@ -1,18 +1,18 @@
-from QuickLatin.entry_and_inflections import *
-from QuickLatin.whitakers_words import WW_FORMATER
-from QuickLatin.searcher import get_matches, FormGroup, EntryQuery
+from PyWhitakersWords.entry_and_inflections import *
+from PyWhitakersWords.whitakers_words import WW_FORMATER
+from PyWhitakersWords.searcher import get_matches, FormGroup, EntryQuery
 from typing import List, Tuple, Optional, Dict
 from abc import abstractmethod
 
+# PATH = "/home/henry/Desktop/latin_website/PyWhitakersWords/"
 
-PATH = "/home/henry/Desktop/latin_website/QuickLatin/"
 
 class JoinedLexicon(Lexicon):
-    def load(self):
-        self.load_inflections()
-        self.load_dictionary()
-        self.load_addons()
-        self.load_uniques()
+    def load(self, path: str):
+        self.load_inflections(path)
+        self.load_dictionary(path)
+        self.load_addons(path)
+        self.load_uniques(path)
 
     def _add_inflection_rule(self, pos: PartOfSpeech, m, line, index):
         assert m is not None
@@ -36,9 +36,9 @@ class JoinedLexicon(Lexicon):
         self.inflection_list.append(entry)
         self.map_ending_infls[ending].append(entry)
 
-    def load_inflections(self):
+    def load_inflections(self, path: str):
         index = 0  # this might be useful to a formater by specifying the order that the entries are in the dictionary
-        with open(PATH + "/DataFiles/INFLECTS.txt", encoding="ISO-8859-1") as ifile:
+        with open(path + "/DataFiles/INFLECTS.txt", encoding="ISO-8859-1") as ifile:
             for line in ifile:
                 line = line.strip().split("--")[0].strip()
                 if line.strip() == "":
@@ -89,10 +89,10 @@ class JoinedLexicon(Lexicon):
                         self.stem_map[(lemma.part_of_speach, i)][stem] = []
                     self.stem_map[(lemma.part_of_speach, i)][stem].append(key)
 
-    def load_dictionary(self):
+    def load_dictionary(self, path: str):
         self.stem_map = {(pos, i): {} for pos in PartOfSpeech for i in [1,2,3,4]}
         import json
-        with open("/home/henry/Desktop/latin_website/QuickLatin/DataFiles/JOINED.txt", "r", encoding='utf-8') as i:
+        with open("/home/henry/Desktop/latin_website/PyWhitakersWords/GeneratedFiles/JOINED.txt", "r", encoding='utf-8') as i:
             l = json.load(i)
         print("FILE READ")
         dictionary_lemmata = [DictionaryLemma.from_dict(d) for d in l]
@@ -101,11 +101,11 @@ class JoinedLexicon(Lexicon):
             self.insert_lemma(lemma)
             # print("{}/{}".format(i, len(dictionary_lemmata)))
 
-    def load_addons(self):
+    def load_addons(self, path: str):
         self.prefix_list.append(None)
         self.suffix_list.append(None)
         self.tackon_list.append(None)
-        with open(PATH + "DataFiles/ADDONS.LAT", encoding="ISO-8859-1") as ifile:
+        with open(path + "DataFiles/ADDONS.txt", encoding="ISO-8859-1") as ifile:
             lines = [line[:-1].split("--")[0] for line in ifile if line.split("--")[0] != ""]
         assert len(lines) % 3 == 0
         while len(lines) > 0:
@@ -122,8 +122,8 @@ class JoinedLexicon(Lexicon):
                 raise ValueError(lines)
 
 
-    def load_uniques(self):
-        with open(PATH + "DataFiles/UNIQUES.LAT", encoding="ISO-8859-1") as ifile:
+    def load_uniques(self, path: str):
+        with open(path + "DataFiles/UNIQUES.txt", encoding="ISO-8859-1") as ifile:
             lines = [line[:-1].split("--")[0] for line in ifile if line.split("--")[0] != ""]
         assert len(lines) % 3 == 0
         while len(lines) > 0:
