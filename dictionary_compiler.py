@@ -1,17 +1,20 @@
+#!/usr/bin/python3
+
 import os
 import sys
 
-sys.path.insert(0, os.path.split(os.path.dirname(__file__))[0])
+abs_pth = os.path.abspath(__file__)
+PATH = os.path.split(abs_pth)[0]
+PATH_UP = os.path.split(PATH)[0]
+PATH +="/"
+PATH_UP +="/"
+sys.path.insert(0, PATH_UP)
 
 import xml.etree.ElementTree as ET
 from PyWhitakersWords.entry_and_inflections import *
 from PyWhitakersWords import whitakers_words
 from typing import Tuple, Optional, Any
 import json
-
-PATH = os.path.split(__file__)[0] + "/"
-print(PATH)
-
 
 WW_LEXICON, WW_FORMATER = whitakers_words.init(PATH)
 
@@ -499,18 +502,18 @@ class Entry:
 
 def parse_entry(ent) -> Optional['Entry']:
     global ct, gct
-    SHOW_DONW = True
+    # SHOW_DONW = True
     assert ent.attrib['type'] in {'main', 'spur', 'hapax', 'greek', 'gloss', 'foreign'}
     if ent.attrib['type'] in {'gloss', 'hapax'}:
         return None
     # if SHOW_DONW:
-    #     print("".join(ent.itertext()))
+    #     # print("".join(ent.itertext()))
 
     gct += 1
 
     base_word = ent[0].text
     if "(" in base_word:  # base_word.startswith("vul") and base_word.endswith("\)") and (base_word[:-2].endswith("\(vol.") or base_word[:-3].endswith("\(vol.")):
-        print(base_word)
+        # print(base_word)
         base_word = re.match("(.*) \(.*", base_word).group(1)
     whole_line = "".join(ent.itertext())
     whole_line = re.sub(r" ?\([^)]*\)|\^", "", whole_line)[:200]
@@ -563,7 +566,7 @@ def parse_entry(ent) -> Optional['Entry']:
         r"(\S*)[,.]?( ((ord|num|card|distrib|distr|comp|dim|comm|neutr|less|m|n|f)\.)| plur){0,2} +[aA]dj[., ]",
         whole_line)
     if m is not None:
-        if SHOW_DONW: print("Simple ADJ", m.group(1))
+        # if SHOW_DONW: print("Simple ADJ", m.group(1))
         return
     # PATTERN ADJ 1/2r"(\S*){a}[,.] {b}(([,.](.+,)?)|( .*,)) adj."
     PATTERN_ADJ = r"((\S*( -\S*)?){a})[,.]? ({b})( \S*)?(([,.](.+,)?)|( .*,))( ((card|ord|num|distrib|distr|comp|dim|comm|neutr|less|m|n|f)\.)| plur)* [aA]dj\."
@@ -579,7 +582,7 @@ def parse_entry(ent) -> Optional['Entry']:
             stem_2 = downgrade_vowels(clip_end(group_2 + suffix_stem_2, bl)).lower().replace(" -", "")
             # gen = m.group(PATTERN_NOUN_GEN_INDX)[0].upper()
             # if len(k) != 3:
-            #     print(whole_line[:75])
+            #     # print(whole_line[:75])
             # if SHOW_DONW: print("ADJ", stem_1, stem_2, k)
             return Entry(ent, PartOfSpeech.Adjective, (stem_1, stem_2, None, None), k)
 
@@ -587,7 +590,7 @@ def parse_entry(ent) -> Optional['Entry']:
     # for a, b in []:
     #     m = re.match(PATTERN_ADJ_3.format(a=a, b=b), whole_line)
     #     if m is not None:
-    #         if SHOW_DONW: print("ADJ Decl 3")
+    #         # if SHOW_DONW: print("ADJ Decl 3")
     #         return
 
     # TODO there is work to do with verb stem extraction
@@ -667,53 +670,53 @@ def parse_entry(ent) -> Optional['Entry']:
     m = re.match(make_pattern_verb("o", "(1|āre|āvi|ātum)", 'v\.'), whole_line)
     if m is not None:
         # if SHOW_DONW:
-        print("Verb Conj 1:", whole_line[:100])
+        # print("Verb Conj 1:", whole_line[:100])
         return Entry.unknown(ent)
 
     m = re.match(make_pattern_verb("o", "āre", ''), whole_line)
     if m is not None:
         # if SHOW_DONW:
-        print("Verb Conj 1:", whole_line[:100])
+        # print("Verb Conj 1:", whole_line[:100])
         return Entry.unknown(ent)
 
     m = re.match(make_pattern_verb("or", "(1|[aā]ri)", '(v\.|dep\.)'), whole_line)
     if m is not None:
         # if SHOW_DONW:
-        print("Verb Conj 1 Dep:", whole_line[:100])
+        # print("Verb Conj 1 Dep:", whole_line[:100])
         return Entry.unknown(ent)
 
     m = re.match(make_pattern_verb("o", "(2|ēre)", '(v\.| )'), whole_line)
     if m is not None:
         # if SHOW_DONW:
-        print("Verb Conj 2:", whole_line[:100])
+        # print("Verb Conj 2:", whole_line[:100])
         return Entry.unknown(ent)
     m = re.match(make_pattern_verb("or", "ēri", ''), whole_line)
     if m is not None:
         # if SHOW_DONW:
-        print("Verb Conj 2 Dep:", whole_line[:100])
+        # print("Verb Conj 2 Dep:", whole_line[:100])
         return Entry.unknown(ent)
 
     m = re.match(make_pattern_verb("o", "(3|ĕre)", 'v.'), whole_line)
     if m is not None:
         # if SHOW_DONW:
-        print("Verb Conj 3:", whole_line[:100])
+        # print("Verb Conj 3:", whole_line[:100])
         return Entry.unknown(ent)
     m = re.match(make_pattern_verb("o", "ĕre", ''), whole_line)
     if m is not None:
         # if SHOW_DONW:
-        print("Verb Conj 3:", whole_line[:100])
+        # print("Verb Conj 3:", whole_line[:100])
         return Entry.unknown(ent)
 
     m = re.match(make_pattern_verb("o", "(4|[iī]re)", 'v.'), whole_line)
     if m is not None:
         # if SHOW_DONW:
-        print("Verb Conj 4:", whole_line[:100])
+        # print("Verb Conj 4:", whole_line[:100])
         return Entry.unknown(ent)
 
     m = re.match(r"(\S*), adv\.,? v\. (\d\. )?(\S*),?( +(fin|I|II|III|A|B|C|D|P. a)\.?,?)* *$", whole_line)
     if m is not None:
         # if SHOW_DONW:
-        print("Adverb Varient")
+        # print("Adverb Varient")
         return Entry.unknown(ent)
         # return Entry(ent, PartOfSpeech.Adverb, (m.group(1), None, None, None), (AdjectiveKind.Positive, m.group(3), m.group(5)))
 
@@ -721,7 +724,7 @@ def parse_entry(ent) -> Optional['Entry']:
     if m is not None:
         # if SHOW_DONW:
         # print("Adverb", m.group(1))
-        print("ADV", whole_line)
+        # print("ADV", whole_line)
         return Entry(ent, PartOfSpeech.Adverb, (m.group(1), None, None, None), (AdjectiveKind.Positive, None, None))
 
     m = re.match(r"(\S*), interj.", whole_line)
@@ -738,7 +741,7 @@ def parse_entry(ent) -> Optional['Entry']:
     m = re.match(r"(\S*)(us([,.] a)?([,.] um)?[,.]?|ans([,.] antis)?[,.]?|ens([,.] entis)?[,.]?) +(P|Part)\.",
                  whole_line)
     if m is not None:
-        if SHOW_DONW: print("Participle")
+        # if SHOW_DONW: print("Participle")
         return Entry.unknown(ent)
 
     m = re.match(r"(\S*) (indecl)\.", whole_line)
@@ -747,43 +750,43 @@ def parse_entry(ent) -> Optional['Entry']:
         return Entry(ent, PartOfSpeech.Noun, (m.group(1), None, None, None), ((9, 9), ""))
     m = re.match(r"\S \S (indecl)\.", whole_line)
     if m is not None:
-        if SHOW_DONW: print("Indelc")
+        # if SHOW_DONW: print("Indelc")
         return Entry.unknown(ent)
 
     m = re.match(r"(\S*), v\. (\S*)\.?(( init\.?)|( fin\.?))*\s*$", whole_line)
     if m is not None:
-        if SHOW_DONW: print("Simple Variant")
+        # if SHOW_DONW: print("Simple Variant")
         return Entry.unknown(ent)
 
     m = re.match(r"(\S*)us, a, um, v\. (\S*)\.?( |$)", whole_line)
     if m is not None:
-        if SHOW_DONW: print("Simple Variant 2")
+        # if SHOW_DONW: print("Simple Variant 2")
         return Entry.unknown(ent)
 
     m = re.match(r"(\S*), (\S*),( (\S*),){0,3} etc\., v\.", whole_line)
     if m is not None:
-        if SHOW_DONW: print("Simple Variant3")
+        # if SHOW_DONW: print("Simple Variant3")
         return Entry.unknown(ent)
 
     for a, _, b, _, _ in NOUN_3rd_ENDINGS:
         k = r"(\S*){a}, {b}, v\. (\S*)\.?( |$)".format(a=a, b=b)
         m = re.match(k, whole_line)
         if m is not None:
-            if SHOW_DONW: print("Variant Noun")
+            # if SHOW_DONW: print("Variant Noun")
             return Entry.unknown(ent)
     for a, _, b, _, _, _ in NOUN_non_3rd_ENDINGS:
         k = r"(\S*){a}, {b}, v\. (\S*)\.?( |$)".format(a=a, b=b)
         m = re.match(k, whole_line)
         if m is not None:
-            if SHOW_DONW: print("Variant Noun")
+            # if SHOW_DONW: print("Variant Noun")
             return Entry.unknown(ent)
 
     m = re.match(r"\S, \S, ", whole_line)
     if m is not None:
-        if SHOW_DONW: print("Letter")
+        # if SHOW_DONW: print("Letter")
         return Entry.unknown(ent)
 
-    print("****",whole_line[:150])
+    # print("****",whole_line[:150])
 
     ct += 1
     gct -= 1
@@ -857,7 +860,8 @@ for _, ents in ENT_DIC.items():
         if ent.pos != PartOfSpeech.X:
             ND.add(ent.make_lemma()) # (ent.header(), ent)
         else:
-            print(ent.default_keyword)
+            pass
+            # print(ent.default_keyword)
 
 
 ND = list(ND)
