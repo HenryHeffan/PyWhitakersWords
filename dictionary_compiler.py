@@ -1,14 +1,14 @@
-from typing import Tuple, Optional, Any
-import xml.etree.ElementTree as ET
-from PyWhitakersWords.entry_and_inflections import *
-from PyWhitakersWords import whitakers_words
-import json
-
 import os
 import sys
 
-print(os.path.split(os.path.dirname(__file__))[0])
 sys.path.insert(0, os.path.split(os.path.dirname(__file__))[0])
+
+import xml.etree.ElementTree as ET
+from PyWhitakersWords.entry_and_inflections import *
+from PyWhitakersWords import whitakers_words
+from typing import Tuple, Optional, Any
+import json
+
 PATH = os.path.split(__file__)[0] + "/"
 print(PATH)
 
