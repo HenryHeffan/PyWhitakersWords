@@ -7,6 +7,7 @@ import json
 import os
 import sys
 
+print(os.path.split(os.path.dirname(__file__))[0])
 sys.path.insert(0, os.path.split(os.path.dirname(__file__))[0])
 PATH = os.path.split(__file__)[0] + "/"
 print(PATH)
