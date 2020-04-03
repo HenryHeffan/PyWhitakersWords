@@ -4,9 +4,14 @@ from PyWhitakersWords.entry_and_inflections import *
 from PyWhitakersWords import whitakers_words
 import json
 
-from os import path
-PATH = path.split(__file__)[0] + "/"
+import os
+import sys
+
+sys.path.insert(0, os.path.split(os.path.dirname(__file__))[0])
+PATH = os.path.split(__file__)[0] + "/"
 print(PATH)
+
+
 WW_LEXICON, WW_FORMATER = whitakers_words.init(PATH)
 
 

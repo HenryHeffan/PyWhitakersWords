@@ -1293,7 +1293,7 @@ class WWFormater(Formater):
 
         return "".join(output)
 
-def init(path) -> Tuple[WWLexicon, WWFormater]:
+def init(path: str) -> Tuple[WWLexicon, WWFormater]:
     WW_LEXICON = WWLexicon(path)
     WW_FORMATER = WWFormater(WW_LEXICON,
                              NounFormater(WW_LEXICON),
@@ -1316,7 +1316,6 @@ def init(path) -> Tuple[WWLexicon, WWFormater]:
 # for fg in m.unsyncopated_form_groups:
 #     print([(key.part_of_speach, key.stems, rule.part_of_speach, rule.ending) for key, rule in fg.key_infl_pairs])
 # print(WW_FORMATER.display_entry_query(m))
-
 
 
 

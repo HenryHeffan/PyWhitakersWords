@@ -1474,7 +1474,7 @@ class SuffixEntry:
             self.fake_dictionary_entry = NumberDictData(self.decl, self.decl_val, self.new_num_kind, "0")
         else:
             raise ValueError()
-
+        
     def accepts_infl(self, infl: InflectionRule) -> bool:
         if self.new_pos != infl.part_of_speach:
             return False
