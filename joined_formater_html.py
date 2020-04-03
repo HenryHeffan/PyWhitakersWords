@@ -134,8 +134,6 @@ class JoinedLexicon(Lexicon):
             self.uniques[u.word] = u
 
 
-J_LEX = JoinedLexicon()
-
 TWO_WORD_TEMP = """
 <div class="two_word_group">
     <div class="two_word_header">
@@ -1285,75 +1283,78 @@ class Formater:
         return "".join(output)
 
 
-formater = Formater(J_LEX,
-                    NounFormater(J_LEX),
-                    PronounFormater(J_LEX),
-                    VerbFormater(J_LEX),
-                    AdjectiveFormater(J_LEX),
-                    AdverbFormater(J_LEX),
-                    PrepositionFormater(J_LEX),
-                    ConjunctionFormater(J_LEX),
-                    InterjectionFormater(J_LEX),
-                    NumberFormater(J_LEX),
-                    PackonFormater(J_LEX))
+def init(path: str) -> Tuple[JoinedLexicon, Formater]:
+    J_LEX = JoinedLexicon(path)
+    formater = Formater(J_LEX,
+                        NounFormater(J_LEX),
+                        PronounFormater(J_LEX),
+                        VerbFormater(J_LEX),
+                        AdjectiveFormater(J_LEX),
+                        AdverbFormater(J_LEX),
+                        PrepositionFormater(J_LEX),
+                        ConjunctionFormater(J_LEX),
+                        InterjectionFormater(J_LEX),
+                        NumberFormater(J_LEX),
+                        PackonFormater(J_LEX))
+    return J_LEX, formater
 
-def set_formater(_formater: Formater) -> None:
-    global formater
-    formater = _formater
-
-
-def parse(s) -> str:
-    m = get_matches(J_LEX, s)
-    # print(m)
-    return formater.display_entry_query(m)
+# def set_formater(_formater: Formater) -> None:
+#     global formater
+#     formater = _formater
 
 
-def parse_and_def(s) -> Tuple[str, str]:
-    m = get_matches(J_LEX, s)
-
-    def extract(fgs: List[FormGroup]):
-        r = []
-        for fg in fgs:
-            r.append("\n".join([WW_FORMATER.map[fg.lemma.part_of_speach].dic_entry_line(fg.lemma.dictionary_keys[0])]
-                               + ["    " + line for line in fg.lemma.definition.split("\n")]))
-        return r
-
-    l = extract(m.unsyncopated_form_groups) + extract(m.syncopated_form_groups) + (
-        [] if not m.two_words else
-        extract(m.two_words_query1.unsyncopated_form_groups) + extract(m.two_words_query2.syncopated_form_groups))
-    # print("\n".join(l))
-    r = "\n".join(l)
-    if r != "":
-        r += "\n"
-    # print(">>>{}<<<".format(r))
-    return formater.display_entry_query(m), r
-
-
-def parse_document(filename, encoding="utf-8"):
-    lines_raw = []
-    with open(filename, encoding=encoding) as inp:
-        for line in inp:
-            lines_raw.append(line.split("--")[0])
-    lines = []
-    endings = []
-    for i in range(150):  # len(l)):
-        if lines_raw[i].strip() == "":
-            if i > 0:
-                endings[-1] = "\n=>Blank exits =>"
-        else:
-            lines.append(lines_raw[i].strip())
-            endings.append("\n=>")
-    # print(lines, endings)
-    for line, ending in zip(lines, endings):
-        for word in line.split(" "):
-            word = word.strip()
-            if word is not "":
-                print(parse(word))
-        print(ending)
-
-
-# parse_document("/home/henry/Desktop/latin_website/QuickLatin/aeneid_bk4.txt")
-print(parse("qui"))
+# def parse(s) -> str:
+#     m = get_matches(J_LEX, s)
+#     # print(m)
+#     return formater.display_entry_query(m)
+#
+#
+# def parse_and_def(s) -> Tuple[str, str]:
+#     m = get_matches(J_LEX, s)
+#
+#     def extract(fgs: List[FormGroup]):
+#         r = []
+#         for fg in fgs:
+#             r.append("\n".join([WW_FORMATER.map[fg.lemma.part_of_speach].dic_entry_line(fg.lemma.dictionary_keys[0])]
+#                                + ["    " + line for line in fg.lemma.definition.split("\n")]))
+#         return r
+#
+#     l = extract(m.unsyncopated_form_groups) + extract(m.syncopated_form_groups) + (
+#         [] if not m.two_words else
+#         extract(m.two_words_query1.unsyncopated_form_groups) + extract(m.two_words_query2.syncopated_form_groups))
+#     # print("\n".join(l))
+#     r = "\n".join(l)
+#     if r != "":
+#         r += "\n"
+#     # print(">>>{}<<<".format(r))
+#     return formater.display_entry_query(m), r
+#
+#
+# def parse_document(filename, encoding="utf-8"):
+#     lines_raw = []
+#     with open(filename, encoding=encoding) as inp:
+#         for line in inp:
+#             lines_raw.append(line.split("--")[0])
+#     lines = []
+#     endings = []
+#     for i in range(150):  # len(l)):
+#         if lines_raw[i].strip() == "":
+#             if i > 0:
+#                 endings[-1] = "\n=>Blank exits =>"
+#         else:
+#             lines.append(lines_raw[i].strip())
+#             endings.append("\n=>")
+#     # print(lines, endings)
+#     for line, ending in zip(lines, endings):
+#         for word in line.split(" "):
+#             word = word.strip()
+#             if word is not "":
+#                 print(parse(word))
+#         print(ending)
+#
+#
+# # parse_document("/home/henry/Desktop/latin_website/QuickLatin/aeneid_bk4.txt")
+# print(parse("qui"))
 
 
 # e                    SUFFIX
