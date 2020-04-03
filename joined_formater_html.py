@@ -92,7 +92,7 @@ class JoinedLexicon(Lexicon):
     def load_dictionary(self, path: str):
         self.stem_map = {(pos, i): {} for pos in PartOfSpeech for i in [1,2,3,4]}
         import json
-        with open("/home/henry/Desktop/latin_website/PyWhitakersWords/GeneratedFiles/JOINED.txt", "r", encoding='utf-8') as i:
+        with open(path + "GeneratedFiles/JOINED.txt", "r", encoding='utf-8') as i:
             l = json.load(i)
         print("FILE READ")
         dictionary_lemmata = [DictionaryLemma.from_dict(d) for d in l]
