@@ -6,11 +6,12 @@ from abc import abstractmethod
 
 # PATH = "/home/henry/Desktop/latin_website/PyWhitakersWords/"
 
-
+from memory_profiler import profile
 class JoinedLexicon(Lexicon):
-    def load(self, path: str):
+
+    def load(self, path: str, headers_only=False):
         self.load_inflections(path)
-        self.load_dictionary(path)
+        self.load_dictionary(path, headers_only)
         self.load_addons(path)
         self.load_uniques(path)
 
@@ -36,9 +37,10 @@ class JoinedLexicon(Lexicon):
         self.inflection_list.append(entry)
         self.map_ending_infls[ending].append(entry)
 
+    # @profile
     def load_inflections(self, path: str):
         index = 0  # this might be useful to a formater by specifying the order that the entries are in the dictionary
-        with open(path + "/DataFiles/INFLECTS.txt", encoding="ISO-8859-1") as ifile:
+        with open(path + "DataFiles/INFLECTS.txt", encoding="ISO-8859-1") as ifile:
             for line in ifile:
                 line = line.strip().split("--")[0].strip()
                 if line.strip() == "":
@@ -46,10 +48,10 @@ class JoinedLexicon(Lexicon):
 
                 m = re.match(r"(\S*) +(.*) +(\d) (\d) (\S*) +(\S) (\S)", line)
                 assert m is not None
-                part_of_speach = PartOfSpeech.from_str(m.group(1))
-                self._add_inflection_rule(part_of_speach, m, line, index)
+                part_of_speech = PartOfSpeech.from_str(m.group(1))
+                self._add_inflection_rule(part_of_speech, m, line, index)
                 index +=1
-                if part_of_speach == PartOfSpeech.Pronoun:
+                if part_of_speech == PartOfSpeech.Pronoun:
                     # this allows us to conjugate packons as well
                     self._add_inflection_rule(PartOfSpeech.Packon, m, line, index)
                     index +=1
@@ -85,22 +87,26 @@ class JoinedLexicon(Lexicon):
                 if stem_base is None:
                     continue
                 for stem in alternate_forms_of_stem(stem_base):
-                    if not stem in self.stem_map[(lemma.part_of_speach, i)]:
-                        self.stem_map[(lemma.part_of_speach, i)][stem] = []
-                    self.stem_map[(lemma.part_of_speach, i)][stem].append(key)
+                    if not stem in self.stem_map[(lemma.part_of_speech, i)]:
+                        self.stem_map[(lemma.part_of_speech, i)][stem] = []
+                    self.stem_map[(lemma.part_of_speech, i)][stem].append(key)
 
-    def load_dictionary(self, path: str):
+    # @profile
+    def load_dictionary(self, path: str, headers_only=False):
         self.stem_map = {(pos, i): {} for pos in PartOfSpeech for i in [1,2,3,4]}
         import json
-        with open(path + "GeneratedFiles/JOINED.txt", "r", encoding='utf-8') as i:
+        with open(path + "GeneratedFiles/" + ("JOINED_HEADERS.txt" if not headers_only else "JOINED_HEADERS.txt"), "r", encoding='utf-8') as i:
             l = json.load(i)
         print("FILE READ")
-        dictionary_lemmata = [DictionaryLemma.from_dict(d) for d in l]
+        dictionary_lemmata = [DictionaryLemma.load(d) for d in l]
+        del l
         print("LEMATA DECODED")
         for i, lemma in enumerate(dictionary_lemmata):
             self.insert_lemma(lemma)
+        print("DONE")
             # print("{}/{}".format(i, len(dictionary_lemmata)))
 
+    # @profile
     def load_addons(self, path: str):
         self.prefix_list.append(None)
         self.suffix_list.append(None)
@@ -121,7 +127,7 @@ class JoinedLexicon(Lexicon):
             else:
                 raise ValueError(lines)
 
-
+    # @profile
     def load_uniques(self, path: str):
         with open(path + "DataFiles/UNIQUES.txt", encoding="ISO-8859-1") as ifile:
             lines = [line[:-1].split("--")[0] for line in ifile if line.split("--")[0] != ""]
@@ -132,6 +138,9 @@ class JoinedLexicon(Lexicon):
             kind = l1[:6]
             u = UniqueEntry(l1, l2, l3)
             self.uniques[u.word] = u
+class JoinedLexiconFast(CppDictLexicon):
+    def __init__(self, path):
+        CppDictLexicon.__init__(self, path, "GeneratedFiles/JOINED_CPP_FAST.txt")
 
 
 TWO_WORD_TEMP = """
@@ -254,8 +263,7 @@ WORD_GROUP_TEMP = """
 </div>
 """
 
-for gen in Gender:
-    gen.alt_str_val = {
+Gender.alt_str_val = lambda gen: {
             Gender.Male: "masc",
             Gender.Female: "fem",
             Gender.Nueter: "neut",
@@ -263,22 +271,19 @@ for gen in Gender:
             Gender.X: "X"
         }[gen]
 
-for num in Number:
-    num.alt_str_val = {
+Number.alt_str_val = lambda num: {
         Number.Singular: "sg",
         Number.Plural: "pl",
         Number.X: "X"
     }[num]
 
-for voice in Voice:
-    voice.alt_str_val = {
+Voice.alt_str_val = lambda voice: {
         Voice.Active: "act",
         Voice.Passive: "pass",
         Voice.X: "X"
     }[voice]
 
-for mood in Mood:
-    mood.alt_str_val = {
+Mood.alt_str_val = lambda mood: {
         Mood.X: "X",
         Mood.Subjunctive: "subj",
         Mood.Infinative: "inf",
@@ -286,8 +291,7 @@ for mood in Mood:
         Mood.Indicitive: "ind"
     }[mood]
 
-for person in Person:
-    person.alt_str_val = {
+Person.alt_str_val = lambda person: {
         Person.X: "X",
         Person.First: "1st",
         Person.Second: "2nd",
@@ -339,7 +343,7 @@ class FormaterBase:
             DictionaryFrequency.N: "  Pliny",
             DictionaryFrequency.I: "  inscript",
             DictionaryFrequency.X: "",
-        }[dic.translation_metadata.freqency]
+        }[dic.translation_metadata.frequency]
     def dic_metadata_age(self, dic: DictionaryLemma) -> str:
         return {
             DictionaryAge.Always: "  ",
@@ -395,14 +399,13 @@ class NounFormater(FormaterBase):
         return self.SORT_ORDER.index(infl.noun_data.case) + 10 * infl.noun_data.number
 
     def setup(self) -> None:
+        import itertools
         # called once on each class. Use to setup noun formating rules
-        for (decl, decl_var, gender) in set([self.get_key(dic)
-                                             for i in range(1, 5)
-                                             for (stem, l) in self.lex.stem_map[(PartOfSpeech.Noun, i)].items()
-                                             for dic in l]):
-            nom = self.lex.get_noun_inflection_rule(decl, decl_var, gender, Case.Nominative, Number.Singular)
-            gen = self.lex.get_noun_inflection_rule(decl, decl_var, gender, Case.Genative, Number.Singular)
-            self.inflection_table[(decl, decl_var, gender)] = [nom, gen]
+        for decl, decl_var in ALL_DECL_VAR_PAIRS:
+            for gender in Gender:
+                nom = self.lex.get_noun_inflection_rule(decl, decl_var, gender, Case.Nominative, Number.Singular)
+                gen = self.lex.get_noun_inflection_rule(decl, decl_var, gender, Case.Genative, Number.Singular)
+                self.inflection_table[(decl, decl_var, gender)] = [nom, gen]
 
     def make_cannon_form_str(self, dic: DictionaryKey) -> str:
         infls = self.inflection_table[self.get_key(dic)]
@@ -426,9 +429,9 @@ class NounFormater(FormaterBase):
 
     def infl_entry_line(self, dic: DictionaryKey, infl: InflectionRule, word: str) -> str:
         return "noun {case} {number} {gender}".format(
-            case=infl.noun_data.case.str_val.lower(),
-            number=infl.noun_data.number.alt_str_val,
-            gender=combine_gender(infl.noun_data.gender, dic.noun_data.gender).alt_str_val
+            case=Case.str_val(infl.noun_data.case).lower(),
+            number=Number.alt_str_val(infl.noun_data.number),
+            gender=Gender.alt_str_val(combine_gender(infl.noun_data.gender, dic.noun_data.gender))
         )
 
     # def dic_entry_line(self, dic: DictionaryKey) -> str:
@@ -440,7 +443,7 @@ class NounFormater(FormaterBase):
     #     return "{cannon_form}  N {decl}{gender}   {metadata}".format(
     #         cannon_form=self.make_cannon_form_str(dic),
     #         decl=decl,
-    #         gender=dic.noun_data.gender.str_val.upper(),
+    #         gender=Gender.str_val(dic.noun_data.gender).upper(),
     #         metadata=self.format_dic_metadata(dic.translation_metadata)
     #     )
 
@@ -467,16 +470,13 @@ class PronounFormater(FormaterBase):
 
     def setup(self) -> None:
         # for Pronoun: nom, gen
-        for (decl, decl_var) in set([self.get_key(dic)
-                                     for i in range(1, 5)
-                                     for (stem, l) in self.lex.stem_map[(PartOfSpeech.Pronoun, i)].items()
-                                     for dic in l]):
+        for (decl, decl_var) in ALL_DECL_VAR_PAIRS:
             self.inflection_table[(decl, decl_var)] = \
                 [self.lex.get_pronoun_inflection_rule(decl, decl_var, gender, Case.Nominative, Number.Singular)
                  for gender in Gender.MFN()]
 
     def make_cannon_form_str(self, dic: DictionaryKey) -> str:
-        # print(dic.part_of_speach)
+        # print(dic.part_of_speech)
         infls = self.inflection_table[self.get_key(dic)]
         if (dic.pronoun_data.declention, dic.pronoun_data.declention_variant) in {(3, 1), (4, 1), (6, 1)}:
             return "{}, {}, {}".format(
@@ -489,9 +489,9 @@ class PronounFormater(FormaterBase):
     def infl_entry_line(self, dic: DictionaryKey, infl: InflectionRule, word: str) -> str:
         # h.ic                 PRON   3 1 NOM S M
         return "pronoun {case} {number} {gender}".format(
-            case=infl.pronoun_data.case.str_val.lower(),
-            number=infl.pronoun_data.number.alt_str_val,
-            gender=infl.pronoun_data.gender.alt_str_val
+            case=Case.str_val(infl.pronoun_data.case).lower(),
+            number=Number.alt_str_val(infl.pronoun_data.number),
+            gender=Gender.alt_str_val(infl.pronoun_data.gender)
         )
 
     # def dic_entry_line(self, dic: DictionaryKey) -> str:
@@ -518,69 +518,68 @@ class VerbFormater(FormaterBase):
     def setup(self) -> None:
         pass
         # for Verb:
-        for (conj, conj_var, vk) in set([self.get_key(dic)
-                                         for i in range(1, 5)
-                                         for stem, l in self.lex.stem_map[(PartOfSpeech.Verb, i)].items()
-                                         for dic in l]):
-            if vk == VerbKind.X:
-                pp1 = self.lex.get_verb_inflection_rule(conj, conj_var, Number.Singular, Person.First, Voice.Active,
-                                               Tense.Present,
-                                               Mood.Indicitive)
-                pp2 = self.lex.get_verb_inflection_rule(conj, conj_var, Number.X, Person.X, Voice.Active, Tense.Present,
-                                               Mood.Infinative)
-                pp3 = self.lex.get_verb_inflection_rule(conj, conj_var, Number.Singular, Person.First, Voice.Active,
-                                               Tense.Perfect,
-                                               Mood.Indicitive)
-                pp4 = self.lex.get_participle_inflection_rule(conj, conj_var, Number.Singular, Case.Nominative, Voice.Passive,
-                                                     Tense.Perfect)
-                if (conj, conj_var) == (5, 1):
-                    pp4 = self.lex.get_participle_inflection_rule(conj, conj_var, Number.Singular, Case.Nominative, Voice.Active,
-                                                         Tense.Future)
-                self.inflection_table[(conj, conj_var, vk)] = [pp1, pp2, pp3, pp4]
-            elif vk == VerbKind.Impers:
-                pp1 = self.lex.get_verb_inflection_rule(conj, conj_var, Number.Singular, Person.Third, Voice.Active,
-                                               Tense.Present,
-                                               Mood.Indicitive)
-                pp2 = self.lex.get_verb_inflection_rule(conj, conj_var, Number.X, Person.X, Voice.Active, Tense.Present,
-                                               Mood.Infinative)
-                pp3 = self.lex.get_verb_inflection_rule(conj, conj_var, Number.Singular, Person.Third, Voice.Active,
-                                               Tense.Perfect,
-                                               Mood.Indicitive)
-                pp4 = self.lex.get_participle_inflection_rule(conj, conj_var, Number.Singular, Case.Nominative, Voice.Passive,
-                                                     Tense.Perfect)
-                self.inflection_table[(conj, conj_var, vk)] = [pp1, pp2, pp3, pp4]
-            elif vk == VerbKind.Semidep:
-                pp1 = self.lex.get_verb_inflection_rule(conj, conj_var, Number.Singular, Person.First, Voice.Active,
-                                               Tense.Present,
-                                               Mood.Indicitive)
-                # if (conj, conj_var) == (3, 3):
-                pp2 = self.lex.get_verb_inflection_rule(conj, conj_var, Number.X, Person.X, Voice.Active, Tense.Present,
-                                               Mood.Infinative)
-                # else:
-                #     pp2 = self.lex.get_verb_inflection_rule(conj, conj_var, Number.X, Person.X, Voice.Active, Tense.Present, Mood.Infinative)
-                pp4 = self.lex.get_participle_inflection_rule(conj, conj_var, Number.Singular, Case.Nominative, Voice.Passive,
-                                                     Tense.Perfect)
-                self.inflection_table[(conj, conj_var, vk)] = [pp1, pp2, pp4]
-            elif vk == VerbKind.Dep:
-                pp1 = self.lex.get_verb_inflection_rule(conj, conj_var, Number.Singular, Person.First, Voice.Passive,
-                                               Tense.Present,
-                                               Mood.Indicitive)
-                pp2 = self.lex.get_verb_inflection_rule(conj, conj_var, Number.X, Person.X, Voice.Passive, Tense.Present,
-                                               Mood.Infinative)
-                pp4 = self.lex.get_participle_inflection_rule(conj, conj_var, Number.Singular, Case.Nominative, Voice.Passive,
-                                                     Tense.Perfect)
-                self.inflection_table[(conj, conj_var, vk)] = [pp1, pp2, pp4]
-            elif vk == VerbKind.Perfdef:
-                pp1 = self.lex.get_verb_inflection_rule(conj, conj_var, Number.Singular, Person.First, Voice.Active,
-                                               Tense.Perfect,
-                                               Mood.Indicitive)
-                pp2 = self.lex.get_verb_inflection_rule(conj, conj_var, Number.X, Person.X, Voice.Active, Tense.Perfect,
-                                               Mood.Infinative)
-                pp4 = self.lex.get_participle_inflection_rule(conj, conj_var, Number.Singular, Case.Nominative, Voice.Passive,
-                                                     Tense.Perfect)
-                self.inflection_table[(conj, conj_var, vk)] = [pp1, pp2, pp4]
-            else:
-                raise ValueError()
+        for (conj, conj_var) in ALL_CONJ_VAR_PAIRS:
+            for vk in VerbKind:
+                if vk == VerbKind.X:
+                    pp1 = self.lex.get_verb_inflection_rule(conj, conj_var, Number.Singular, Person.First, Voice.Active,
+                                                   Tense.Present,
+                                                   Mood.Indicitive)
+                    pp2 = self.lex.get_verb_inflection_rule(conj, conj_var, Number.X, Person.X, Voice.Active, Tense.Present,
+                                                   Mood.Infinative)
+                    pp3 = self.lex.get_verb_inflection_rule(conj, conj_var, Number.Singular, Person.First, Voice.Active,
+                                                   Tense.Perfect,
+                                                   Mood.Indicitive)
+                    pp4 = self.lex.get_participle_inflection_rule(conj, conj_var, Number.Singular, Case.Nominative, Voice.Passive,
+                                                         Tense.Perfect)
+                    if (conj, conj_var) == (5, 1):
+                        pp4 = self.lex.get_participle_inflection_rule(conj, conj_var, Number.Singular, Case.Nominative, Voice.Active,
+                                                             Tense.Future)
+                    self.inflection_table[(conj, conj_var, vk)] = [pp1, pp2, pp3, pp4]
+                elif vk == VerbKind.Impers:
+                    pp1 = self.lex.get_verb_inflection_rule(conj, conj_var, Number.Singular, Person.Third, Voice.Active,
+                                                   Tense.Present,
+                                                   Mood.Indicitive)
+                    pp2 = self.lex.get_verb_inflection_rule(conj, conj_var, Number.X, Person.X, Voice.Active, Tense.Present,
+                                                   Mood.Infinative)
+                    pp3 = self.lex.get_verb_inflection_rule(conj, conj_var, Number.Singular, Person.Third, Voice.Active,
+                                                   Tense.Perfect,
+                                                   Mood.Indicitive)
+                    pp4 = self.lex.get_participle_inflection_rule(conj, conj_var, Number.Singular, Case.Nominative, Voice.Passive,
+                                                         Tense.Perfect)
+                    self.inflection_table[(conj, conj_var, vk)] = [pp1, pp2, pp3, pp4]
+                elif vk == VerbKind.Semidep:
+                    pp1 = self.lex.get_verb_inflection_rule(conj, conj_var, Number.Singular, Person.First, Voice.Active,
+                                                   Tense.Present,
+                                                   Mood.Indicitive)
+                    # if (conj, conj_var) == (3, 3):
+                    pp2 = self.lex.get_verb_inflection_rule(conj, conj_var, Number.X, Person.X, Voice.Active, Tense.Present,
+                                                   Mood.Infinative)
+                    # else:
+                    #     pp2 = self.lex.get_verb_inflection_rule(conj, conj_var, Number.X, Person.X, Voice.Active, Tense.Present, Mood.Infinative)
+                    pp4 = self.lex.get_participle_inflection_rule(conj, conj_var, Number.Singular, Case.Nominative, Voice.Passive,
+                                                         Tense.Perfect)
+                    self.inflection_table[(conj, conj_var, vk)] = [pp1, pp2, pp4]
+                elif vk == VerbKind.Dep:
+                    pp1 = self.lex.get_verb_inflection_rule(conj, conj_var, Number.Singular, Person.First, Voice.Passive,
+                                                   Tense.Present,
+                                                   Mood.Indicitive)
+                    pp2 = self.lex.get_verb_inflection_rule(conj, conj_var, Number.X, Person.X, Voice.Passive, Tense.Present,
+                                                   Mood.Infinative)
+                    pp4 = self.lex.get_participle_inflection_rule(conj, conj_var, Number.Singular, Case.Nominative, Voice.Passive,
+                                                         Tense.Perfect)
+                    self.inflection_table[(conj, conj_var, vk)] = [pp1, pp2, pp4]
+                elif vk == VerbKind.Perfdef:
+                    pp1 = self.lex.get_verb_inflection_rule(conj, conj_var, Number.Singular, Person.First, Voice.Active,
+                                                   Tense.Perfect,
+                                                   Mood.Indicitive)
+                    pp2 = self.lex.get_verb_inflection_rule(conj, conj_var, Number.X, Person.X, Voice.Active, Tense.Perfect,
+                                                   Mood.Infinative)
+                    pp4 = self.lex.get_participle_inflection_rule(conj, conj_var, Number.Singular, Case.Nominative, Voice.Passive,
+                                                         Tense.Perfect)
+                    self.inflection_table[(conj, conj_var, vk)] = [pp1, pp2, pp4]
+                else:
+                    continue
+                # raise ValueError()
 
     def make_cannon_form_str(self, dic: DictionaryKey) -> str:
         infls = self.inflection_table[self.get_key(dic)]
@@ -607,11 +606,11 @@ class VerbFormater(FormaterBase):
                                            dic.make_form(infls[3], default="-"))
 
     def infl_entry_line(self, dic: DictionaryKey, infl: InflectionRule, word: str) -> str:
-        if infl.part_of_speach == PartOfSpeech.Verb:
+        if infl.part_of_speech == PartOfSpeech.Verb:
             return self.infl_entry_line_verb(dic, infl, word)
-        elif infl.part_of_speach == PartOfSpeech.Supine:
+        elif infl.part_of_speech == PartOfSpeech.Supine:
             return self.infl_entry_line_suppine(dic, infl, word)
-        elif infl.part_of_speach == PartOfSpeech.Participle:
+        elif infl.part_of_speech == PartOfSpeech.Participle:
             return self.infl_entry_line_participle(dic, infl, word)
         else:
             raise ValueError()
@@ -622,27 +621,27 @@ class VerbFormater(FormaterBase):
         # if (conj, conj_var) == (3, 4):
         #     conj, conj_var = ConjugationType(4), ConjugationSubtype(1)
         return "verb {tense} {voice} {mood} {person} {number}".format(
-            tense=infl.verb_data.tense.str_val.lower(),
-            voice=infl.verb_data.voice.alt_str_val if dic.verb_data.verb_kind != VerbKind.Dep else "deponent",
-            mood=pad_to_len(infl.verb_data.mood.str_val.lower(), 3),
-            person=infl.verb_data.person.alt_str_val,
-            number=infl.verb_data.number.alt_str_val,
+            tense=Tense.str_val(infl.verb_data.tense).lower(),
+            voice=Voice.alt_str_val(infl.verb_data.voice) if dic.verb_data.verb_kind != VerbKind.Dep else "deponent",
+            mood=pad_to_len(Mood.str_val(infl.verb_data.mood).lower(), 3),
+            person=Person.alt_str_val(infl.verb_data.person),
+            number=Number.alt_str_val(infl.verb_data.number),
         )
 
     def infl_entry_line_suppine(self, dic: DictionaryKey, infl: InflectionRule, word: str) -> str:
         return "supine {case} {number} {gender}".format(
-            case=infl.supine_entry.case.str_val.lower(),
-            number=infl.supine_entry.number.alt_str_val,
-            gender=infl.supine_entry.gender.alt_str_val,
+            case=Case.str_val(infl.supine_entry.case).lower(),
+            number=Number.alt_str_val(infl.supine_entry.number),
+            gender=Gender.alt_str_val(infl.supine_entry.gender),
         )
 
     def infl_entry_line_participle(self, dic: DictionaryKey, infl: InflectionRule, word: str) -> str:
         return "participle {case} {number} {gender} {tense} {voice}".format(
-            case=infl.participle_entry.case.str_val.lower(),
-            number=infl.participle_entry.number.alt_str_val,
-            gender=infl.participle_entry.gender.alt_str_val,
-            tense=infl.participle_entry.tense.str_val.lower(),
-            voice=infl.participle_entry.voice.alt_str_val if dic.verb_data.verb_kind != VerbKind.Dep else "deponent",
+            case=Case.str_val(infl.participle_entry.case).lower(),
+            number=Number.alt_str_val(infl.participle_entry.number),
+            gender=Gender.alt_str_val(infl.participle_entry.gender),
+            tense=Tense.str_val(infl.participle_entry.tense).lower(),
+            voice=Voice.alt_str_val(infl.participle_entry.voice) if dic.verb_data.verb_kind != VerbKind.Dep else "deponent",
         )
 
     # def dic_entry_line(self, dic: DictionaryKey) -> str:
@@ -693,7 +692,7 @@ class VerbFormater(FormaterBase):
                             Tense.FuturePerfect, Tense.X]
         SORT_ORDER_VOICE = [Voice.Active, Voice.Passive, Voice.X]
         SORT_ORDER_MOOD = [Mood.Indicitive, Mood.Subjunctive, Mood.Imperative, Mood.Infinative, Mood.X]
-        if infl.part_of_speach != PartOfSpeech.Verb:
+        if infl.part_of_speech != PartOfSpeech.Verb:
             return 0
         else:
             return SORT_ORDER_TENSE.index(infl.verb_data.tense) * 100 + SORT_ORDER_VOICE.index(
@@ -703,19 +702,19 @@ class VerbFormater(FormaterBase):
                        Case.Ablative, Case.X]
 
     def sort_infls_key_part(self, infl: InflectionRule):
-        if infl.part_of_speach != PartOfSpeech.Participle:
+        if infl.part_of_speech != PartOfSpeech.Participle:
             return 0
         else:
             return self.SORT_ORDER_VPAR.index(infl.participle_entry.case) + 10 * infl.participle_entry.number
 
     # def format_group(self, dic: DictionaryKey, infls: List[InflectionRule], word: str) -> Tuple[str, str, str]:
     #     verbs = [pad_to_len(self.infl_entry_line(dic, infl, word), 56) + self.format_infl_metadata(infl.metadata)
-    #              for infl in sorted(infls, key=self.sort_infls_key_verb) if infl.part_of_speach == PartOfSpeech.Verb]
+    #              for infl in sorted(infls, key=self.sort_infls_key_verb) if infl.part_of_speech == PartOfSpeech.Verb]
     #     vpars = [pad_to_len(self.infl_entry_line(dic, infl, word), 56) + self.format_infl_metadata(infl.metadata)
     #              for infl in sorted(infls, key=self.sort_infls_key_part) if
-    #              infl.part_of_speach == PartOfSpeech.Participle]
+    #              infl.part_of_speech == PartOfSpeech.Participle]
     #     sups = [pad_to_len(self.infl_entry_line(dic, infl, word), 56) + self.format_infl_metadata(infl.metadata)
-    #             for infl in sorted(infls, key=self.sort_infls_key) if infl.part_of_speach == PartOfSpeech.Supine]
+    #             for infl in sorted(infls, key=self.sort_infls_key) if infl.part_of_speech == PartOfSpeech.Supine]
     #     forms = "\n".join(verbs + vpars + sups)
     #     cannon = self.dic_entry_line(dic) + "\n"  # cannon_form
     #     defen = "\n".join([l[:79] if len(l) >= 79 else l for l in dic.definition.lines])
@@ -728,10 +727,7 @@ class AdjectiveFormater(FormaterBase):
         return dic.adjective_data.declention, dic.adjective_data.declention_variant
 
     def setup(self) -> None:
-        for (decl, decl_var) in set([self.get_key(dic)
-                                     for i in range(1, 5)
-                                     for (stem, l) in self.lex.stem_map[(PartOfSpeech.Adjective, i)].items()
-                                     for dic in l]):
+        for (decl, decl_var) in ALL_DECL_VAR_PAIRS:
             pos = [self.lex.get_adjective_inflection_rule(decl, decl_var, g, Case.Nominative, Number.Singular,
                                                  AdjectiveKind.Positive)
                    for g in Gender.MFN()]
@@ -823,10 +819,10 @@ class AdjectiveFormater(FormaterBase):
         # grav.i               ADJ    3 2 DAT S X POS
         # grav.i               ADJ    3 2 ABL S X POS
         return "adj {case} {number} {gender} {adj_kind}".format(
-            case=infl.adjective_data.case.str_val.lower(),
-            number=infl.adjective_data.number.alt_str_val,
-            gender=infl.adjective_data.gender.alt_str_val,
-            adj_kind=infl.adjective_data.adjective_kind.str_val.lower()
+            case=Case.str_val(infl.adjective_data.case).lower(),
+            number=Number.alt_str_val(infl.adjective_data.number),
+            gender=Gender.alt_str_val(infl.adjective_data.gender),
+            adj_kind=AdjectiveKind.str_val(infl.adjective_data.adjective_kind).lower()
         )
 
     # def dic_entry_line(self, dic: DictionaryKey) -> str:
@@ -865,7 +861,7 @@ class AdverbFormater(FormaterBase):
 
     def infl_entry_line(self, dic: DictionaryKey, infl: InflectionRule, word: str) -> str:
         return "adv {adj_kind}".format(
-            adj_kind=infl.adverb_data.adjective_kind_output.str_val.lower()
+            adj_kind=AdjectiveKind.str_val(infl.adverb_data.adjective_kind_output).lower()
         )
 
     # def dic_entry_line(self, dic: DictionaryKey) -> str:
@@ -879,7 +875,7 @@ class AdverbFormater(FormaterBase):
 
 class PrepositionFormater(FormaterBase):
     def setup(self) -> None:
-        self.inflection_rule = [infl for infl in self.lex.inflection_list if infl.part_of_speach == PartOfSpeech.Preposition][0]
+        self.inflection_rule = [infl for infl in self.lex.inflection_list if infl.part_of_speech == PartOfSpeech.Preposition][0]
 
     def make_cannon_form_str(self, dic: DictionaryKey) -> str:
         return dic.make_form(self.inflection_rule)
@@ -887,7 +883,7 @@ class PrepositionFormater(FormaterBase):
     def infl_entry_line(self, dic: DictionaryKey, infl: InflectionRule, word: str) -> str:
         # cum                  PREP   ABL
         return "prep w/ {case}".format(
-            case=dic.preposition_data.takes_case.str_val.lower()
+            case=Case.str_val(dic.preposition_data.takes_case).lower()
         )
 
     # def dic_entry_line(self, dic: DictionaryKey) -> str:
@@ -899,12 +895,12 @@ class PrepositionFormater(FormaterBase):
     #     )
 
     def get_extra_info_spot(self, dic: DictionaryKey) -> str:
-        return "+ {}".format(dic.preposition_data.takes_case.str_val.lower())
+        return "+ {}".format(Case.str_val(dic.preposition_data.takes_case).lower())
 
 
 class ConjunctionFormater(FormaterBase):
     def setup(self) -> None:
-        self.inflection_rule = [infl for infl in self.lex.inflection_list if infl.part_of_speach == PartOfSpeech.Conjunction][0]
+        self.inflection_rule = [infl for infl in self.lex.inflection_list if infl.part_of_speech == PartOfSpeech.Conjunction][0]
 
     def make_cannon_form_str(self, dic: DictionaryKey) -> str:
         return dic.make_form(self.inflection_rule)
@@ -926,7 +922,7 @@ class ConjunctionFormater(FormaterBase):
 
 class InterjectionFormater(FormaterBase):
     def setup(self) -> None:
-        self.inflection_rule = [infl for infl in self.lex.inflection_list if infl.part_of_speach == PartOfSpeech.Interjection][0]
+        self.inflection_rule = [infl for infl in self.lex.inflection_list if infl.part_of_speech == PartOfSpeech.Interjection][0]
 
     def make_cannon_form_str(self, dic: DictionaryKey) -> str:
         return dic.make_form(self.inflection_rule)
@@ -956,10 +952,7 @@ class NumberFormater(FormaterBase):
         return self.SORT_ORDER.index(infl.number_data.case) + 10 * infl.number_data.number
 
     def setup(self) -> None:
-        for (decl, decl_var) in set([self.get_key(dic)
-                                     for i in range(1, 5)
-                                     for (stem, l) in self.lex.stem_map[(PartOfSpeech.Number, i)].items()
-                                     for dic in l]):
+        for (decl, decl_var) in ALL_DECL_VAR_PAIRS:
             card = [self.lex.get_number_inflection_rule(decl, decl_var, g, Case.Nominative, Number.Singular, NumberKind.Cardinal)
                     for
                     g in Gender.MFN()]
@@ -992,10 +985,10 @@ class NumberFormater(FormaterBase):
         # un.a                 NUM    1 1 VOC S F CARD
         # un.a                 NUM    1 1 ABL S F CARD
         return "num {case} {number} {gender} {num_kind}".format(
-            case=infl.number_data.case.str_val.lower(),
-            number=infl.number_data.number.alt_str_val,
-            gender=infl.number_data.gender.alt_str_val,
-            num_kind=infl.number_data.number_kind.str_val.lower()
+            case=Case.str_val(infl.number_data.case).lower(),
+            number=Number.alt_str_val(infl.number_data.number),
+            gender=Gender.alt_str_val(infl.number_data.gender),
+            num_kind=NumberKind.str_val(infl.number_data.number_kind).lower()
         )
 
     # def dic_entry_line(self, dic: DictionaryKey) -> str:
@@ -1036,16 +1029,13 @@ class PackonFormater(FormaterBase):
 
     def setup(self) -> None:
         # for Packon: nom, gen
-        for (decl, decl_var) in set([self.get_key(dic)
-                                     for i in range(1, 5)
-                                     for (stem, l) in self.lex.stem_map[(PartOfSpeech.Packon, i)].items()
-                                     for dic in l]):
+        for (decl, decl_var) in ALL_DECL_VAR_PAIRS:
             self.inflection_table[(decl, decl_var)] = \
                 [self.lex.get_pronoun_inflection_rule(decl, decl_var, gender, Case.Nominative, Number.Singular)
                  for gender in Gender.MFN()]
 
     def make_cannon_form_str(self, dic: DictionaryKey) -> str:
-        # print(dic.part_of_speach)
+        # print(dic.part_of_speech)
         infls = self.inflection_table[self.get_key(dic)]
         if (dic.packon_data.declention, dic.packon_data.declention_variant) in {(3, 1), (4, 1), (6, 1)}:
             return "{}, {}, {}".format(
@@ -1058,9 +1048,9 @@ class PackonFormater(FormaterBase):
     def infl_entry_line(self, dic: DictionaryKey, infl: InflectionRule, word: str) -> str:
         # h.ic                 PRON   3 1 NOM S M
         return "pron {case} {number} {gender}".format(
-            case=infl.packon_data.case.str_val.lower(),
-            number=infl.packon_data.number.alt_str_val,
-            gender=infl.packon_data.gender.alt_str_val
+            case=Case.str_val(infl.packon_data.case).lower(),
+            number=Number.alt_str_val(infl.packon_data.number),
+            gender=Gender.alt_str_val(infl.packon_data.gender)
         )
 
     # def dic_entry_line(self, dic: DictionaryKey) -> str:
@@ -1105,7 +1095,7 @@ class Formater:
             formater.setup()
 
     def dictionary_keyword(self, dic: DictionaryKey) -> str:
-        return self.map[dic.part_of_speach].dictionary_key_form(dic)
+        return self.map[dic.part_of_speech].dictionary_key_form(dic)
 
     # def format_suffix_group(self, form_group: FormGroup, word: str) -> Tuple[str, str, str]:
     #     assert form_group.suffix is not None
@@ -1187,7 +1177,7 @@ class Formater:
         # nls: List[FormatFormGroup] = []
         # for format_group_pos in format_groups:
         #     for format_group in nls:
-        #         if format_group.dic.part_of_speach == format_group_pos.dic.part_of_speach and\
+        #         if format_group.dic.part_of_speech == format_group_pos.dic.part_of_speech and\
         #                 format_group.dic.definition.lines == format_group_pos.dic.definition.lines and\
         #                 format_group.infls_is_sync_pairs == format_group_pos.infls_is_sync_pairs and\
         #                 format_group.tackon == format_group_pos.tackon and\
@@ -1225,8 +1215,8 @@ class Formater:
             group_id = format_group.lemma.index
             # TODO TEST alternate forms
             if format_group.suffix is None:
-                infl_formater = self.map[format_group.lemma.part_of_speach]
-                dic_formater = self.map[format_group.lemma.part_of_speach]
+                infl_formater = self.map[format_group.lemma.part_of_speech]
+                dic_formater = self.map[format_group.lemma.part_of_speech]
                 inflectable_dic = format_group.lemma
             else:
                 infl_formater = self.map[format_group.suffix.new_pos]
@@ -1246,8 +1236,8 @@ class Formater:
             # [DEFINITION_ROW_TEMP.format(definition_row_slot=line) for line in
             definition_rows = format_group.lemma.definition
 
-            # print(format_group.dic.part_of_speach, [infl.part_of_speach for infl, sync_data in format_group.infls_is_sync_pairs ], format_group.suffix)
-            # print(format_group.suffix, [((key.part_of_speach, key.stems), form.part_of_speach, word, is_sync) for key, form, word, is_sync in format_group.key_infl_pairs])
+            # print(format_group.dic.part_of_speech, [infl.part_of_speech for infl, sync_data in format_group.infls_is_sync_pairs ], format_group.suffix)
+            # print(format_group.suffix, [((key.part_of_speech, key.stems), form.part_of_speech, word, is_sync) for key, form, word, is_sync in format_group.key_infl_pairs])
             form_rows = [FORM_ROW_TEMP.format(
                 form_row_word_slot=form.make_split_word_form(word),
                 form_row_form_slot=infl_formater.make_infl_row_str(
@@ -1268,7 +1258,7 @@ class Formater:
                     suffix_meaning=format_group.suffix.explination
                 ) if format_group.suffix is not None else "",
                 metadata_space=METADATA_TEMP.format(
-                    metadata_slot_1=format_group.lemma.part_of_speach.name + " &nbsp; &nbsp; &nbsp; " +
+                    metadata_slot_1=format_group.lemma.part_of_speech.name + " &nbsp; &nbsp; &nbsp; " +
                                     dic_formater.get_extra_info_spot(format_group.lemma.dictionary_keys[0]),
                     metadata_slot_2=dic_formater.dic_metadata_frequency(format_group.lemma) + " &nbsp; &nbsp; &nbsp; " +
                                     dic_formater.dic_metadata_age(format_group.lemma)
@@ -1282,9 +1272,11 @@ class Formater:
             ))
         return "".join(output)
 
-
+GLOB_TAB = {}
 def init(path: str) -> Tuple[JoinedLexicon, Formater]:
-    J_LEX = JoinedLexicon(path)
+    if path in GLOB_TAB:
+        return GLOB_TAB[path]
+    J_LEX = JoinedLexiconFast(path)
     formater = Formater(J_LEX,
                         NounFormater(J_LEX),
                         PronounFormater(J_LEX),
@@ -1296,8 +1288,10 @@ def init(path: str) -> Tuple[JoinedLexicon, Formater]:
                         InterjectionFormater(J_LEX),
                         NumberFormater(J_LEX),
                         PackonFormater(J_LEX))
+    GLOB_TAB[path] = (J_LEX, formater)
     return J_LEX, formater
 
+# init("/home/henry/Desktop/latin_website/PyWhitakersWords/")
 # def set_formater(_formater: Formater) -> None:
 #     global formater
 #     formater = _formater
@@ -1314,7 +1308,7 @@ def init(path: str) -> Tuple[JoinedLexicon, Formater]:
 #     def extract(fgs: List[FormGroup]):
 #         r = []
 #         for fg in fgs:
-#             r.append("\n".join([WW_FORMATER.map[fg.lemma.part_of_speach].dic_entry_line(fg.lemma.dictionary_keys[0])]
+#             r.append("\n".join([WW_FORMATER.map[fg.lemma.part_of_speech].dic_entry_line(fg.lemma.dictionary_keys[0])]
 #                                + ["    " + line for line in fg.lemma.definition.split("\n")]))
 #         return r
 #

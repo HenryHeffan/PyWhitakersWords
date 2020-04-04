@@ -1,165 +1,8 @@
-#!/usr/bin/python3
-
-import os
-import sys
-
-abs_pth = os.path.abspath(__file__)
-PATH = os.path.split(abs_pth)[0]
-PATH_UP = os.path.split(PATH)[0]
-PATH +="/"
-PATH_UP +="/"
-sys.path.insert(0, PATH_UP)
-
-import xml.etree.ElementTree as ET
+# import PyWhitakersWords.dictionary_comp.dictionary_compiler
+from PyWhitakersWords.utils import *
 from PyWhitakersWords.entry_and_inflections import *
-from PyWhitakersWords import whitakers_words
-from typing import Tuple, Optional, Any
-import json
-
-WW_LEXICON, WW_FORMATER = whitakers_words.init(PATH)
-
-
-def strip_spec_chars(s):
-    for r, spec in SPEC_CHARS:
-        s = s.replace(spec, r)
-    return s
-
-
-def downgrade_vowels(s):
-    for spec, r in VOWEL_MAP:
-        # print(spec, r)
-        s = s.replace(spec, r)
-    return s
-
-
-HTML_PREFIX_TEMP = """<!DOCTYPE html>
-    <html>
-    <head>
-      <title>Dictionary</title>
-      <meta charset="utf-8">
-      <meta name="viewport" content="width=device-width, height=device-height, initial-scale=1">
-      <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css">
-      <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
-      <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js"></script>
-    <style>
-
-    .orth {
-        color: #000;
-        font-weight:bold;
-    }
-    .itype {
-        color: #000;
-    }
-    .gen {
-        color: #000;
-    }
-    .pos {
-        color: #000;
-    }
-    .etym {
-        color: #304030;
-    }
-    .sense_block {
-    }
-    .sense_block_1 {
-        padding-left: 10px;
-    }
-    .sense_block_2 {
-        padding-left: 25px;
-    }
-    .sense_block_3 {
-        padding-left: 40px;
-    }
-    .sense_block_4 {
-        padding-left: 50px;
-    }
-    .sense_block_5 {
-        padding-left: 60px;
-    }
-    .sense_heading {
-        color: #000
-    }
-    .quote {
-        color: #a09090;
-    }
-    .bibl {
-        color: #90a090;
-    }
-    .foreign {
-        color: #9090a0
-    }
-    .entryFree {
-        color: #676767;
-    }
-    .hi_ital{
-        color: #000;
-    }
-    </style>
-    </head>
-    <body>
-    <h1>Lewis and Short</h1>
-    <h3>Formatted by Henry Heffan</h3>
-    Text provided under a CC BY-SA license by Perseus Digital Library, http://www.perseus.tufts.edu, with funding from The National Endowment for the Humanities.
-<br>
-Data accessed from https://github.com/PerseusDL/lexica/ [date of access].
-<br>
-<br>"""
-
-VOWEL_MAP=[('ā', 'a'), ('Ā', 'A'), ('ă', 'a'),             ('á', 'a'),
-           ('ē', 'e'), ('Ē', 'E'), ('ĕ', 'e'), ("ë", "e"), ('é', 'e'),
-           ('ī', 'i'), ('Ī', 'I'), ('ĭ', 'i'), ('ï', 'i'),
-           ('ō', 'o'), ('Ō', 'O'), ('ŏ', 'o'), ("ö", "o"),
-           ('ū', 'u'), ('Ū', 'U'), ('ŭ', 'u'), ('ü', 'u'), ('ú', 'u'), ('ù', 'u'),
-           ('ȳ', 'y'),             ('ў', 'y'), ('ÿ', 'y'),
-           ('^', ''),
-           ("œ", "oe"), ("æ", "ae")]
-
-
-# dlmp = {}
-# for dic in WW_LEXICON.dictionary_keys:
-#     k = None
-#     if dic.part_of_speach == PartOfSpeech.Noun:
-#         k = (PartOfSpeech.Noun,
-#              tuple(dic.stems),
-#              dic.noun_data.declention,
-#              dic.noun_data.declention_variant,
-#              dic.noun_data.gender)
-#     elif dic.part_of_speach == PartOfSpeech.Adjective:
-#         k = (PartOfSpeech.Adjective,
-#              tuple(dic.stems),
-#              dic.adjective_data.declention,
-#              dic.adjective_data.declention_variant)
-#     if k is not None and (k not in dlmp or dic.translation_metadata.freqency > dlmp[k].translation_metadata.freqency):
-#         dlmp[k] = dic
-
-
-SPEC_CHARS = [
-    ('ae', '&oelig;'), ('À', '&Agrave;'), ('Á', '&Aacute;'), ('Â', '&Acirc;'), ('Ã', '&Atilde;'),
-    ('Ä', '&Auml;'), ('Å', '&Aring;'), ('à', '&agrave;'), ('á', '&aacute;'), ('â', '&acirc;'),
-    ('ã', '&atilde;'), ('ä', '&auml;'), ('å', '&aring;'), ('Æ', '&AElig;'), ('æ', '&aelig;'),
-    ('ß', '&szlig;'), ('Ç', '&Ccedil;'), ('ç', '&ccedil;'), ('È', '&Egrave;'), ('É', '&Eacute;'),
-    ('Ê', '&Ecirc;'), ('Ë', '&Euml;'), ('è', '&egrave;'), ('é', '&eacute;'), ('ê', '&ecirc;'),
-    ('ë', '&euml;'), ('ƒ', '&#131;'), ('Ì', '&Igrave;'), ('Í', '&Iacute;'), ('Î', '&Icirc;'),
-    ('Ï', '&Iuml;'), ('ì', '&igrave;'), ('í', '&iacute;'), ('î', '&icirc;'), ('ï', '&iuml;'),
-    ('Ñ', '&Ntilde;'), ('ñ', '&ntilde;'), ('Ò', '&Ograve;'), ('Ó', '&Oacute;'), ('Ô', '&Ocirc;'),
-    ('Õ', '&Otilde;'), ('Ö', '&Ouml;'), ('ò', '&ograve;'), ('ó', '&oacute;'), ('ô', '&ocirc;'),
-    ('õ', '&otilde;'), ('ö', '&ouml;'), ('Ø', '&Oslash;'), ('ø', '&oslash;'), ('Œ', '&#140;'),
-    ('œ', '&#156;'), ('Š', '&#138;'), ('š', '&#154;'), ('Ù', '&Ugrave;'), ('Ú', '&Uacute;'),
-    ('Û', '&Ucirc;'), ('Ü', '&Uuml;'), ('ù', '&ugrave;'), ('ú', '&uacute;'), ('û', '&ucirc;'),
-    ('ü', '&uuml;'), ('µ', '&#181;'), ('×', '&#215;'), ('Ý', '&Yacute;'), ('Ÿ', '&#159;'),
-    ('ý', '&yacute;'), ('ÿ', '&yuml;'), ('°', '&#176;'), ('†', '&#134;'), ('‡', '&#135;'),
-    ('±', '&#177;'), ('«', '&#171;'), ('»', '&#187;'), ('¿', '&#191;'), ('¡', '&#161;'),
-    ('·', '&#183;'), ('•', '&#149;'), ('™', '&#153;'), ('©', '&copy;'), ('®', '&reg;'),
-    ('§', '&#167;'), ('¶', '&#182;'), ('*', '&ast;'), ("'", '&lsquo;'), ("'", '&rsquo;'),
-    ('˘', '&breve;'), ('¯', '&macr;'), ('¯', '&acutemacr;'), ('£', '&pound;'), ('ā', '&amacr;'),
-    ('Ā', '&Amacr;'), ('ē', '&emacr;'), ('Ē', '&Emacr;'), ('ī', '&imacr;'), ('Ī', '&Imacr;'),
-    ('ō', '&omacr;'), ('Ō', '&Omacr;'), ('ū', '&umacr;'), ('Ū', '&Umacr;'), ('ȳ', '&ymacr;'),
-    ('—', '&mdash;'), ('i', '&itilde;'), ('.', '&cj;'), ('"', '&ldquo'), ('"', '&rdquo')
-]
-# ('<', '&lt;'), # ('>', '&gt;'), #
-
-# TODO commeneted out 'alis' line 2611
-# TODO commeneted out 'quidam' lines 158038 to 158060
+from typing import Optional, Tuple, Dict
+import re
 
 NOUN_non_3rd_ENDINGS = [
     ('a',      1, 'ae',    2, '(m.|f.|comm.)',  (1, 1)),
@@ -333,175 +176,9 @@ ADJ_ENDINGS = [
     ('ĕber', 0, 'ēbris, ēbre', 2, (3, 3)),
 ]
 
-# THIS CODE DOES 2 THINGS
-# 1) it extracts all the lewis and short entries, and classefies them according to type ==> LEWIS_SHORT.txt
-# 2) it then glues the two dictionaries together ==> LSJDL.txt
-
-import re
-ct = 0
-gct = 0
-class Entry:
-    @staticmethod
-    def unknown(ent) -> 'Entry':
-        m = re.match(r"†? *([^.:;,/_(\-' ]*)(( ?-|/|_)([^.;:,/_(\-' ]*))?( ?-([^.;:,/_(\-' ]*))?",
-                     "".join(ent.itertext()))
-
-        nkw = downgrade_vowels((m.group(1) +
-                                ("" if m.group(4) is None else m.group(4)) +
-                                ("" if m.group(6) is None else m.group(6))).lower())
-        # self.default_keyword = nkw  # ent.attrib['key']
-        return Entry(ent, PartOfSpeech.X, (nkw, None, None, None), None)
-
-        # children = {child.tag: child for child in ent}
-        # print(self.key_word, children)
-        # THE GOAL IS TO TAKE THE ENTRY AND OUTPUT ONE PartOfSpeach and Declention/Conjugation Information
-        # In other words, we want to make this possible to pass to the Whitakers Words engin
-        # self.form = Form(children['form'])
-        # self.gramGrp = GrammarGroup(children['gramGrp']) if 'gramGrp' in children else None
-        # self.sense = Sense(children['sense']) if 'sense' in children else None
-    def __init__(self, ent, pos: PartOfSpeech, stems: StemGroup, data: Any):
-        self.id = ent.attrib['id']
-
-        m = re.match(r"†? *([^.:;,/_(\-' ]*)(( ?-|/|_)([^.;:,/_(\-' ]*))?( ?-([^.;:,/_(\-' ]*))?",
-                     "".join(ent.itertext()))
-        nkw = downgrade_vowels((m.group(1) +
-                                ("" if m.group(4) is None else m.group(4)) +
-                                ("" if m.group(6) is None else m.group(6))).lower())
-        self.key_word = nkw  # ent.attrib['key']
-        self.default_keyword = nkw
-        # okw = re.match(r"([A-Za-z!]*)\d*", self.key_word.lower().replace("/", "")).group(1)
-        # print(self.key_word, okw, nkw)
-        # assert okw == nkw or okw in {'in', 'super', 'intercisi', 'inter', 'patri', 'per', 'quadri', 'quantulus', 'quarta', 're', 'umi', 'vacue'}
-        self.ent = ent
-        self.pos = pos
-        self.stems = [downgrade_vowels(s).replace(" -", "").replace("-", "") if s is not None else None for s in stems]
-        self.data = data
-
-    def extract_html(self) -> str:
-        o = []
-        level_ct = [0]
-        def recurse(e):
-            dived = "span"
-            if e.tag == "entryFree":
-                o.append("<div class=\"entryFree\" id={}>".format(self.id))
-                dived = "div"
-            elif e.tag == "orth":
-                o.append("<span class=\"orth\">")
-            elif e.tag == "pos":
-                o.append("<span class=\"pos\">")
-            elif e.tag == "itype":
-                o.append("<span class=\"itype\">")
-            elif e.tag == "sense":
-                level = int(e.attrib['level'])
-                while len(level_ct) > level:
-                    level_ct.pop()
-                while len(level_ct) < level:
-                    level_ct.append(0)
-                level_ct[-1]+=1
-                ct = level_ct[-1]
-
-                LEVEL_ENDINGS = {
-                    "1": [None, "I.", "II.", "III.", "IV.", "V.", "VI.", "VII.", "VIII.", "IX.", "X.",
-                               "XI.", "XII.", "XIII.", "XIV.", "XV.", "XVI.", "XVII.", "XVIII.", "XIX.", "XX.",],
-                    "2": [None] + ["{})".format(i) for i in "ABCDEFGHIJKLMNOPQRSTUVWXYZ"],
-                    "3": [None] + ["{})".format(i) for i in range(1, 100)],
-                    "4": [None] + ["{})".format(i) for i in "abcdefghijklmnopqrstuvwxyz"],
-                    "5": [None] + ["-"] * 99,
-                }
-                assert len(LEVEL_ENDINGS[e.attrib['level']]) > ct, (e.attrib['level'], ct, self.key_word)
-                ending = LEVEL_ENDINGS[e.attrib['level']][ct]
-                o.append("<div class=\"sense_block_{}\" id={} level={}><span class=\"sense_heading\">{}</span> ".format(e.attrib['level'], e.attrib['id'], e.attrib['level'], ending))
-                dived = "div"
-            elif e.tag == "hi" and e.attrib['rend'] == "ital":
-                o.append("<span class=\"hi_ital\">")
-            elif e.tag is not None:
-                o.append("<span class=\"{}\">".format(e.tag))
-            else:
-                dived=None
-
-            if e.text:
-                if e.tag == "sense":
-                    o.append("<span class=\"hi_ital\">")
-                    o.append(e.text)
-                    o.append("</span>")
-                else:
-                    o.append(e.text)
-            for child in e:
-                recurse(child)
-
-            if dived is not None:
-                o.append("</{}>".format(dived))
-            if e.tail:
-                o.append(e.tail)
-
-        recurse(self.ent)
-        # o[-1]=o[-1] # remove a trailing "\n"
-        return "".join(o).rstrip("\n")
-
-    def header(self):
-        s = "".join([pad_to_len(s, 25) if s is not None else " " * 25 for s in ent.stems])
-        payload = ""
-        if self.pos == PartOfSpeech.Noun:
-            payload = "{} {} {} X".format(self.data[0][0], self.data[0][1], (Gender.from_str(self.data[1]) if self.data[1] is not "" else Gender.X).str_val)
-        elif self.pos == PartOfSpeech.Adjective:
-            payload = "{} {} POS".format(self.data[0], self.data[1])
-        elif self.pos == PartOfSpeech.Verb:
-            payload = "{} {} {}".format(self.data[0], self.data[1], self.data[2].upper())
-        elif self.pos == PartOfSpeech.Adverb:
-            payload = "{}".format(self.data[0].str_val.upper())
-        elif self.pos == PartOfSpeech.Preposition:
-            payload = "X"
-        elif self.pos == PartOfSpeech.Conjunction:
-            payload = ""
-        elif self.pos == PartOfSpeech.Interjection:
-            payload = ""
-        elif self.pos == PartOfSpeech.X:
-            payload = "POS_X"
-        else:
-            raise ValueError()
-
-        return pad_to_len(s + pad_to_len(self.pos.str_val, 7) + pad_to_len(payload, 17) + "X X X X X", 110)
-
-    def make_lemma(self) -> DictionaryLemma:
-        pos_data = None
-        short_def = ""
-        if self.pos == PartOfSpeech.Noun:
-            pos_data = NounDictData(self.data[0][0], self.data[0][1], Gender.from_str(self.data[1]) if self.data[1] is not "" else Gender.X, NounKind.X)
-        elif self.pos == PartOfSpeech.Adjective:
-            pos_data = AdjectiveDictData(self.data[0], self.data[1], AdjectiveKind.Positive)
-        elif self.pos == PartOfSpeech.Verb:
-            pos_data = VerbDictData(self.data[0], self.data[1], self.data[2])
-        elif self.pos == PartOfSpeech.Adverb:
-            pos_data = AdverbDictData(AdjectiveKind.X)
-        elif self.pos == PartOfSpeech.Preposition:
-            pos_data = PrepositionDictData(Case.X)
-        elif self.pos == PartOfSpeech.Conjunction:
-            pos_data = ConjunctionDictData()
-        elif self.pos == PartOfSpeech.Interjection:
-            pos_data = InterjectionDictData()
-        elif self.pos == PartOfSpeech.X:
-            pos_data = None
-        else:
-            raise ValueError()
-        return DictionaryLemma(self.pos,
-                               [DictionaryKey(self.stems, self.pos, pos_data)],
-                               TranslationMetadata("X X X X X"),
-                               short_def,
-                               self.extract_html(),
-                               -1)
-
-    # def key(self):
-    #     if self.pos == PartOfSpeech.Noun:
-    #         return (PartOfSpeech.Noun, tuple(self.stems), self.data[0][0], self.data[0][1], Gender.from_str(self.data[1]) if self.data[1] is not "" else Gender.X)
-    #     elif self.pos == PartOfSpeech.Adjective:
-    #         return (PartOfSpeech.Adjective, tuple(self.stems), self.data[0], self.data[1])
-
-
-
-
-
 def parse_entry(ent) -> Optional['Entry']:
     global ct, gct
+
     # SHOW_DONW = True
     assert ent.attrib['type'] in {'main', 'spur', 'hapax', 'greek', 'gloss', 'foreign'}
     if ent.attrib['type'] in {'gloss', 'hapax'}:
@@ -792,97 +469,156 @@ def parse_entry(ent) -> Optional['Entry']:
     gct -= 1
     return Entry.unknown(ent)
 
-def get_ls_ents():
-    with open(PATH + 'DataFiles/lewis_and_short.xml') as f:
-        s = strip_spec_chars(f.read())
 
+import re
+ct = 0
+gct = 0
+class Entry:
+    @staticmethod
+    def unknown(ent) -> 'Entry':
+        m = re.match(r"†? *([^.:;,/_(\-' ]*)(( ?-|/|_)([^.;:,/_(\-' ]*))?( ?-([^.;:,/_(\-' ]*))?",
+                     "".join(ent.itertext()))
 
-    root = ET.fromstring(s)
-    text = root[1][0]
-    ents = []
-    for child in text:
-        for ent in child:
-            if ent.tag == "entryFree":
-                e = parse_entry(ent)
-                if e is not None:
-                    ents.append(e)
-    return ents
+        nkw = downgrade_vowels((m.group(1) +
+                                ("" if m.group(4) is None else m.group(4)) +
+                                ("" if m.group(6) is None else m.group(6))).lower())
+        # self.default_keyword = nkw  # ent.attrib['key']
+        return Entry(ent, PartOfSpeech.X, (nkw, None, None, None), None)
 
+        # children = {child.tag: child for child in ent}
+        # print(self.key_word, children)
+        # THE GOAL IS TO TAKE THE ENTRY AND OUTPUT ONE PartOfSpeach and Declention/Conjugation Information
+        # In other words, we want to make this possible to pass to the Whitakers Words engin
+        # self.form = Form(children['form'])
+        # self.gramGrp = GrammarGroup(children['gramGrp']) if 'gramGrp' in children else None
+        # self.sense = Sense(children['sense']) if 'sense' in children else None
+    def __init__(self, ent, pos: PartOfSpeech, stems: StemGroup, data: Any):
+        self.id = ent.attrib['id']
 
-# we want to make a new dictionary file format. This will compile the old dictionary into the new one.
-# This new dictionary will use 1 line to store entries from Whittickers words
-# It will delimate line breaks with \n in the string. These should be replaced before displaying
+        m = re.match(r"†? *([^.:;,/_(\-' ]*)(( ?-|/|_)([^.;:,/_(\-' ]*))?( ?-([^.;:,/_(\-' ]*))?",
+                     "".join(ent.itertext()))
+        nkw = downgrade_vowels((m.group(1) +
+                                ("" if m.group(4) is None else m.group(4)) +
+                                ("" if m.group(6) is None else m.group(6))).lower())
+        self.key_word = nkw  # ent.attrib['key']
+        self.default_keyword = nkw
+        # okw = re.match(r"([A-Za-z!]*)\d*", self.key_word.lower().replace("/", "")).group(1)
+        # print(self.key_word, okw, nkw)
+        # assert okw == nkw or okw in {'in', 'super', 'intercisi', 'inter', 'patri', 'per', 'quadri', 'quantulus', 'quarta', 're', 'umi', 'vacue'}
+        self.ent = ent
+        self.pos = pos
+        self.stems = [downgrade_vowels(s).replace(" -", "").replace("-", "") if s is not None else None for s in stems]
+        self.data = data
 
-# First, we will read in all the entry (above)
+    def extract_html(self) -> str:
+        o = []
+        level_ct = [0]
+        def recurse(e):
+            dived = "span"
+            if e.tag == "entryFree":
+                o.append("<div class=\"entryFree\" id={}>".format(self.id))
+                dived = "div"
+            elif e.tag == "orth":
+                o.append("<span class=\"orth\">")
+            elif e.tag == "pos":
+                o.append("<span class=\"pos\">")
+            elif e.tag == "itype":
+                o.append("<span class=\"itype\">")
+            elif e.tag == "sense":
+                level = int(e.attrib['level'])
+                while len(level_ct) > level:
+                    level_ct.pop()
+                while len(level_ct) < level:
+                    level_ct.append(0)
+                level_ct[-1]+=1
+                ct = level_ct[-1]
 
-# then, if for any word a keyword in lewis and short exists once and a keyword
+                LEVEL_ENDINGS = {
+                    "1": [None, "I.", "II.", "III.", "IV.", "V.", "VI.", "VII.", "VIII.", "IX.", "X.",
+                               "XI.", "XII.", "XIII.", "XIV.", "XV.", "XVI.", "XVII.", "XVIII.", "XIX.", "XX.",],
+                    "2": [None] + ["{})".format(i) for i in "ABCDEFGHIJKLMNOPQRSTUVWXYZ"],
+                    "3": [None] + ["{})".format(i) for i in range(1, 100)],
+                    "4": [None] + ["{})".format(i) for i in "abcdefghijklmnopqrstuvwxyz"],
+                    "5": [None] + ["-"] * 99,
+                }
+                assert len(LEVEL_ENDINGS[e.attrib['level']]) > ct, (e.attrib['level'], ct, self.key_word)
+                ending = LEVEL_ENDINGS[e.attrib['level']][ct]
+                o.append("<div class=\"sense_block_{}\" id={} level={}><span class=\"sense_heading\">{}</span> ".format(e.attrib['level'], e.attrib['id'], e.attrib['level'], ending))
+                dived = "div"
+            elif e.tag == "hi" and e.attrib['rend'] == "ital":
+                o.append("<span class=\"hi_ital\">")
+            elif e.tag is not None:
+                o.append("<span class=\"{}\">".format(e.tag))
+            else:
+                dived=None
 
-ls_ents = get_ls_ents()
+            if e.text:
+                if e.tag == "sense":
+                    o.append("<span class=\"hi_ital\">")
+                    o.append(e.text)
+                    o.append("</span>")
+                else:
+                    o.append(e.text)
+            for child in e:
+                recurse(child)
 
-# we want to glue these entries together into a DictionaryLemma
-# good_ents = [ent for ent in ls_ents if ent is not None and ent.stems[0] not in {"", "-", None, "_i"}]
-# good_ents.sort(key=lambda x: x.stems[0].lower())
+            if dived is not None:
+                o.append("</{}>".format(dived))
+            if e.tail:
+                o.append(e.tail)
 
-# new_dic = list(WW_LEXICON.dictionary_list)
-ENT_DIC = {}
-for ent in ls_ents:
-    k = (re.match(r"([a-zA-Z]*)", ent.key_word).group(1), ent.pos.str_val)
-    if k not in ENT_DIC:
-        ENT_DIC[k] = []
-    ENT_DIC[k].append(ent)
+        recurse(self.ent)
+        # o[-1]=o[-1] # remove a trailing "\n"
+        return "".join(o).rstrip("\n")
 
-ND = set()
-for key in WW_LEXICON.dictionary_keys:
-    key.html_data = []
-    k = (WW_FORMATER.dictionary_keyword(key), key.part_of_speach.str_val)
-    k2 = (WW_FORMATER.dictionary_keyword(key), PartOfSpeech.X.str_val)
-    if k in ENT_DIC:
-        # assert key.html_data is None, (k, key.html_data)
-        key.html_data = [ent.extract_html() for ent in ENT_DIC[k]]
-        del ENT_DIC[k]
-    elif k2 in ENT_DIC:
-        # assert key.html_data is None, (k2, key.lemma.html_data)
-        key.html_data = [ent.extract_html() for ent in ENT_DIC[k2]]
-        del ENT_DIC[k2]
-
-for lemma in WW_LEXICON.dictionary_lemmata:
-    htmls = []
-    for key in lemma.dictionary_keys:
-        for html in key.html_data:
-            if html not in htmls:
-                htmls.append(html)
-    lemma.html_data = "\n".join(htmls)
-    ND.add(lemma)
-
-# Now add all the enmatched pairs. But only do this if it is NOT of type X, because those cant be conjugated
-for _, ents in ENT_DIC.items():
-    for ent in ents:
-        if ent.pos != PartOfSpeech.X:
-            ND.add(ent.make_lemma()) # (ent.header(), ent)
+    def header(self):
+        s = "".join([pad_to_len(s, 25) if s is not None else " " * 25 for s in self.stems])
+        payload = ""
+        if self.pos == PartOfSpeech.Noun:
+            payload = "{} {} {} X".format(self.data[0][0], self.data[0][1], Gender.str_val(Gender.from_str(self.data[1]) if self.data[1] is not "" else Gender.X))
+        elif self.pos == PartOfSpeech.Adjective:
+            payload = "{} {} POS".format(self.data[0], self.data[1])
+        elif self.pos == PartOfSpeech.Verb:
+            payload = "{} {} {}".format(self.data[0], self.data[1], self.data[2].upper())
+        elif self.pos == PartOfSpeech.Adverb:
+            payload = "{}".format(AdjectiveKind.str_val(self.data[0]).upper())
+        elif self.pos == PartOfSpeech.Preposition:
+            payload = "X"
+        elif self.pos == PartOfSpeech.Conjunction:
+            payload = ""
+        elif self.pos == PartOfSpeech.Interjection:
+            payload = ""
+        elif self.pos == PartOfSpeech.X:
+            payload = "POS_X"
         else:
-            pass
-            # print(ent.default_keyword)
+            raise ValueError()
 
+        return pad_to_len(s + pad_to_len(PartOfSpeech.str_val(self.pos), 7) + pad_to_len(payload, 17) + "X X X X X", 110)
 
-ND = list(ND)
-ND.sort(key=lambda x: x.dictionary_keys[0].stems[0] if x.dictionary_keys[0].stems[0] is not None else "zzz")
-
-with open(PATH + "/GeneratedFiles/JOINED.txt", "w", encoding='utf-8') as o:
-    json.dump([n.to_dict() for n in ND], o, indent=1)
-
-with open(PATH + "/GeneratedFiles/JOINED_HEADERS.txt", "w", encoding='utf-8') as o:
-    json.dump([n.to_dict(header=True) for n in ND], o, indent=1)
-#
-# with open("/home/henry/Desktop/latin_website/PyWhitakersWords/GeneratedFiles/JOINED.txt", "w", encoding='utf-8') as o:
-#     json.dump([n.to_dict(def_lookup=True) for n in ND], o, indent=1)
-
-def generate_html_dic():
-    l = []
-    for e in ls_ents:
-        l.extend(e.extract_html())
-        l.append("\n")
-    with open(PATH + "GeneratedFiles/lewis_and_short_formated.html", "w") as o:
-        o.write(HTML_PREFIX_TEMP)
-        o.write("".join(l))
-        o.write("""</body></html>""")
-
+    def make_lemma(self) -> DictionaryLemma:
+        pos_data = None
+        short_def = ""
+        if self.pos == PartOfSpeech.Noun:
+            pos_data = NounDictData(self.data[0][0], self.data[0][1], Gender.from_str(self.data[1]) if self.data[1] is not "" else Gender.X, NounKind.X)
+        elif self.pos == PartOfSpeech.Adjective:
+            pos_data = AdjectiveDictData(self.data[0], self.data[1], AdjectiveKind.Positive)
+        elif self.pos == PartOfSpeech.Verb:
+            pos_data = VerbDictData(self.data[0], self.data[1], self.data[2])
+        elif self.pos == PartOfSpeech.Adverb:
+            pos_data = AdverbDictData(AdjectiveKind.X)
+        elif self.pos == PartOfSpeech.Preposition:
+            pos_data = PrepositionDictData(Case.X)
+        elif self.pos == PartOfSpeech.Conjunction:
+            pos_data = ConjunctionDictData()
+        elif self.pos == PartOfSpeech.Interjection:
+            pos_data = InterjectionDictData()
+        elif self.pos == PartOfSpeech.X:
+            pos_data = None
+        else:
+            raise ValueError()
+        return DictionaryLemma(self.pos,
+                               [DictionaryKey(self.stems, self.pos, pos_data)],
+                               TranslationMetadata("X X X X X"),
+                               short_def,
+                               self.extract_html(),
+                               -1)

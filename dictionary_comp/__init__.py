@@ -1,0 +1,2 @@
+import PyWhitakersWords.dictionary_comp.l_and_s_parser
+

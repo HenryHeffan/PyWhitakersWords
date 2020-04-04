@@ -4,27 +4,6 @@ from typing import NewType, Tuple, List, Dict, Optional, Any, Union, Generator
 from abc import abstractmethod, ABCMeta
 
 
-# helper functions for formatting strings
-
-def pad_to_len(s: str, l: int) -> str:
-    return s + " " * (l - len(s))
-
-
-def clip_end(s: str, i: int):
-    if i == 0:
-        return s
-    else:
-        return s[:-i]
-
-
-def joined(stem, ending):
-    if ending != "":
-        return "{}.{}".format(stem, ending)
-    else:
-        return stem
-
-
-
 ########################################################################################################################
 ########################################################################################################################
 #                                             Globally Useful Constants                                                #
@@ -41,9 +20,9 @@ class StringMappedEnum(enum.IntEnum):
     def _STR_VALS():
         pass
 
-    @property
-    def str_val(self) -> str:
-        return {a: b for a, b in self._STR_VALS()}[self]
+    @classmethod
+    def str_val(cls, inst) -> str:
+        return {a: b for a, b in cls._STR_VALS()}[inst]
 
     @classmethod
     def from_str(cls, s):
@@ -146,9 +125,14 @@ class Case(StringMappedEnum):
 
 ConjugationType = NewType("ConjugationType", int)
 ConjugationSubtype = NewType("ConjugationSubtype", int)
+ALL_CONJ_VAR_PAIRS: List[Tuple[ConjugationType, ConjugationSubtype]] = \
+    [(ConjugationType(i), ConjugationSubtype(j)) for i in range(10) for j in range(10)]
 
 DeclentionType = NewType("DeclentionType", int)
 DeclentionSubtype = NewType("DeclentionSubtype", int)
+ALL_DECL_VAR_PAIRS: List[Tuple[ConjugationType, ConjugationSubtype]] = \
+    [(DeclentionType(i), DeclentionSubtype(j)) for i in range(10) for j in range(10)]
+
 
 
 class PartOfSpeech(StringMappedEnum):
@@ -433,19 +417,11 @@ class NounDictData:
         self.gender: Gender = gender
         self.noun_kind: NounKind = noun_kind
 
-    def to_dict(self) -> Dict:
-        return {
-            "decl": self.declention,
-            "decl_var": self.declention_variant,
-            "gender": self.gender.str_val,
-            "noun_kind": self.noun_kind.str_val
-        }
+    def store(self) -> str:
+        return "{} {} {} {}".format(self.declention, self.declention_variant, Gender.str_val(self.gender), NounKind.str_val(self.noun_kind))
     @staticmethod
-    def from_dict(data) -> 'NounDictData':
-        return NounDictData(DeclentionType(data['decl']),
-                            DeclentionSubtype(data['decl_var']),
-                            Gender.from_str(data["gender"]),
-                            NounKind.from_str(data["noun_kind"]))
+    def load(data) -> 'NounDictData':
+        return NounDictData.from_str(data)
 
     def __eq__(self, other):
         return isinstance(other, NounDictData) and \
@@ -482,7 +458,7 @@ class NounInflData(InflDataWithDeclention):
                                          Gender.from_str(m.group(5)))
 
     def matches(self, dict_entry: NounDictData) -> bool:
-        assert isinstance(dict_entry, NounDictData)
+        # assert isinstance(dict_entry, NounDictData)
         return declention_type_matches(self.declention, dict_entry.declention) and \
                declention_subtype_matches(self.declention_variant, dict_entry.declention_variant) and \
                gender_matches(self.gender, dict_entry.gender)
@@ -491,16 +467,14 @@ class NounInflData(InflDataWithDeclention):
 # Preposition Entry classes
 
 class PrepositionDictData:
-    def __init__(self, case: Case) -> None:
-        self.takes_case: Case = case
+    def __init__(self, takes_case: Case) -> None:
+        self.takes_case: Case = takes_case
 
-    def to_dict(self) -> Dict:
-        return {
-            "case": self.takes_case.str_val
-        }
+    def store(self) -> str:
+        return "{}".format(Case.str_val(self.takes_case))
     @staticmethod
-    def from_dict(data) -> 'PrepositionDictData':
-        return PrepositionDictData(Case.from_str(data["case"]))
+    def load(data) -> 'PrepositionDictData':
+        return PrepositionDictData.from_str(data)
 
     def __eq__(self, other):
         return isinstance(other, PrepositionDictData) and \
@@ -523,7 +497,7 @@ class PrepositionInflData:
         return PrepositionInflData(Case.from_str(s.strip()))
 
     def matches(self, dict_entry: PrepositionDictData) -> bool:
-        assert isinstance(dict_entry, PrepositionDictData)
+        # assert isinstance(dict_entry, PrepositionDictData)
         return self.takes_case == dict_entry.takes_case
 
 
@@ -535,17 +509,11 @@ class AdjectiveDictData:
         self.declention_variant: DeclentionSubtype = declention_variant
         self.adjective_kind: AdjectiveKind = adjective_kind
 
-    def to_dict(self) -> Dict:
-        return {
-            "decl": self.declention,
-            "decl_var": self.declention_variant,
-            "adj_kind": self.adjective_kind.str_val
-        }
+    def store(self) -> str:
+        return "{} {} {}".format(self.declention, self.declention_variant, AdjectiveKind.str_val(self.adjective_kind))
     @staticmethod
-    def from_dict(data) -> 'AdjectiveDictData':
-        return AdjectiveDictData(DeclentionType(data['decl']),
-                                 DeclentionSubtype(data['decl_var']),
-                                 AdjectiveKind.from_str(data["adj_kind"]))
+    def load(data) -> 'AdjectiveDictData':
+        return AdjectiveDictData.from_str(data)
 
     def __eq__(self, other):
         return isinstance(other, AdjectiveDictData) and \
@@ -589,7 +557,7 @@ class AdjectiveInflData(InflDataWithDeclention):
                                   AdjectiveKind.from_str(m.group(6)))
 
     def matches(self, dict_entry: AdjectiveDictData) -> bool:
-        assert isinstance(dict_entry, AdjectiveDictData)
+        # assert isinstance(dict_entry, AdjectiveDictData)
         return declention_type_matches(self.declention, dict_entry.declention) and \
                declention_subtype_matches(self.declention_variant, dict_entry.declention_variant)
 
@@ -600,11 +568,10 @@ class ConjunctionDictData:
     def __init__(self):
         pass
 
-    def to_dict(self) -> Dict:
-        return {}
-
+    def store(self) -> str:
+        return ""
     @staticmethod
-    def from_dict(data) -> 'ConjunctionDictData':
+    def load(data) -> 'ConjunctionDictData':
         return ConjunctionDictData()
 
     def __eq__(self, other):
@@ -627,32 +594,28 @@ class ConjunctionInflData:
         return ConjunctionInflData()
 
     def matches(self, dict_entry: ConjunctionDictData) -> bool:
-        assert isinstance(dict_entry, ConjunctionDictData)
+        # assert isinstance(dict_entry, ConjunctionDictData)
         return True
 
 
 # Packon Entry classes
 
 class PackonDictData:
-    def __init__(self, declention: DeclentionType, declention_variant: DeclentionSubtype, pronoun_kind: PronounKind):
+    def __init__(self, declention: DeclentionType, declention_variant: DeclentionSubtype, pronoun_kind: PronounKind, tackon_str: str=""):
         self.declention: DeclentionType = declention
         self.declention_variant: DeclentionSubtype = declention_variant
         self.pronoun_kind: PronounKind = pronoun_kind
-        self.tackon_str: str = ""
+        self.tackon_str = tackon_str
 
-    def to_dict(self) -> Dict:
-        return {
-            "decl": self.declention,
-            "decl_var": self.declention_variant,
-            "pronoun_kind": self.pronoun_kind.str_val,
-            "tackon_str": self.tackon_str
-        }
+    def store(self) -> str:
+        return "{} {} {} {}".format(self.declention, self.declention_variant, PronounKind.str_val(self.pronoun_kind), self.tackon_str)
     @staticmethod
-    def from_dict(data) -> 'PackonDictData':
-        n = PackonDictData(DeclentionType(data['decl']),
-                              DeclentionSubtype(data['decl_var']),
-                              PronounKind.from_str(data["pronoun_kind"]))
-        n.tackon_str = data["tackon_str"]
+    def load(data) -> 'PackonDictData':
+        data = data.split(" ")
+        n = PackonDictData(DeclentionType(int(data[0])),
+                              DeclentionSubtype(int(data[1])),
+                              PronounKind.from_str(data[2]))
+        n.tackon_str = data[3]
         return n
 
     def __eq__(self, other):
@@ -674,7 +637,6 @@ class PackonDictData:
     def get_required_tack_from_def(self, definition_line: str):
         assert definition_line.startswith("(w/-")
         self.tackon_str = definition_line[4:].split(" ")[0].rstrip(")")
-        # print("REQ TACK", self.tackon_str)
     def accepts_tackon(self, tackon: Optional['TackonEntry']):
         return tackon is not None and tackon.tackon == self.tackon_str and tackon.pos == PartOfSpeech.Packon
 
@@ -699,7 +661,7 @@ class PackonInflData(InflDataWithDeclention):
                                 Gender.from_str(m.group(5)))
 
     def matches(self, dict_entry: PackonDictData) -> bool:
-        assert isinstance(dict_entry, PackonDictData)
+        # assert isinstance(dict_entry, PackonDictData)
         return declention_type_matches(self.declention, dict_entry.declention) and \
                declention_subtype_matches(self.declention_variant, dict_entry.declention_variant)
 
@@ -712,17 +674,11 @@ class VerbDictData:
         self.conjugation_variant: ConjugationSubtype = conjugation_variant
         self.verb_kind: VerbKind = verb_kind
 
-    def to_dict(self) -> Dict:
-        return {
-            "conj": self.conjugation,
-            "conj_var": self.conjugation_variant,
-            "verb_kind": self.verb_kind.str_val
-        }
+    def store(self) -> str:
+        return "{} {} {}".format(self.conjugation, self.conjugation_variant, VerbKind.str_val(self.verb_kind))
     @staticmethod
-    def from_dict(data) -> 'VerbDictData':
-        return VerbDictData(ConjugationType(data['conj']),
-                            ConjugationSubtype(data['conj_var']),
-                            VerbKind.from_str(data["verb_kind"]))
+    def load(data) -> 'VerbDictData':
+        return VerbDictData.from_str(data)
 
     def __eq__(self, other):
         return isinstance(other, VerbDictData) and \
@@ -767,7 +723,7 @@ class VerbInflData(InflDataWithConjagation):
                              Number.from_str(m.group(7)))
 
     def matches(self, dict_entry: VerbDictData) -> bool:
-        assert isinstance(dict_entry, VerbDictData)
+        # assert isinstance(dict_entry, VerbDictData)
         return conjugation_type_matches(self.conjugation, dict_entry.conjugation) and \
                conjugation_subtype_matches(self.conjugation_variant, dict_entry.conjugation_variant) and \
                (not dict_entry.verb_kind == VerbKind.Dep or self.voice == Voice.Passive)
@@ -804,7 +760,7 @@ class ParticipleInflData(InflDataWithConjagation):
                                    Voice.from_str(m.group(7)))
 
     def matches(self, dict_entry: VerbDictData) -> bool:
-        assert isinstance(dict_entry, VerbDictData)
+        # assert isinstance(dict_entry, VerbDictData)
         return conjugation_type_matches(self.conjugation, dict_entry.conjugation) and \
                conjugation_subtype_matches(self.conjugation_variant, dict_entry.conjugation_variant)
 
@@ -832,7 +788,7 @@ class SupineInflData(InflDataWithConjagation):
                                Gender.from_str(m.group(5)))
 
     def matches(self, dict_entry: VerbDictData) -> bool:
-        assert isinstance(dict_entry, VerbDictData)
+        # assert isinstance(dict_entry, VerbDictData)
         return conjugation_type_matches(self.conjugation, dict_entry.conjugation) and \
                conjugation_subtype_matches(self.conjugation_variant, dict_entry.conjugation_variant)
 
@@ -845,17 +801,11 @@ class PronounDictData:
         self.declention_variant: DeclentionSubtype = declention_variant
         self.pronoun_kind: PronounKind = pronoun_kind
 
-    def to_dict(self) -> Dict:
-        return {
-            "decl": self.declention,
-            "decl_var": self.declention_variant,
-            "pronoun_kind": self.pronoun_kind.str_val
-        }
+    def store(self) -> str:
+        return "{} {} {}".format(self.declention, self.declention_variant, PronounKind.str_val(self.pronoun_kind))
     @staticmethod
-    def from_dict(data) -> 'PronounDictData':
-        return PronounDictData(DeclentionType(data['decl']),
-                               DeclentionSubtype(data['decl_var']),
-                               PronounKind.from_str(data["pronoun_kind"]))
+    def load(data) -> 'PronounDictData':
+        return PronounDictData.from_str(data)
 
     def __eq__(self, other):
         return isinstance(other, PronounDictData) and \
@@ -893,7 +843,7 @@ class PronounInflData(InflDataWithDeclention):
                                 Gender.from_str(m.group(5)))
 
     def matches(self, dict_entry: PronounDictData) -> bool:
-        assert isinstance(dict_entry, PronounDictData)
+        # assert isinstance(dict_entry, PronounDictData)
         return declention_type_matches(self.declention, dict_entry.declention) and \
                declention_subtype_matches(self.declention_variant, dict_entry.declention_variant)
 
@@ -904,10 +854,10 @@ class InterjectionDictData:
     def __init__(self):
         pass
 
-    def to_dict(self) -> Dict:
-        return {}
+    def store(self) -> str:
+        return ""
     @staticmethod
-    def from_dict(data) -> 'InterjectionDictData':
+    def load(data) -> 'InterjectionDictData':
         return InterjectionDictData()
 
     def __eq__(self, other):
@@ -930,7 +880,7 @@ class InterjectionInflData:
         return InterjectionInflData()
 
     def matches(self, dict_entry: InterjectionDictData) -> bool:
-        assert isinstance(dict_entry, InterjectionDictData)
+        # assert isinstance(dict_entry, InterjectionDictData)
         return True
 
 
@@ -947,13 +897,11 @@ class AdverbDictData:
     def alternate_form_match(self, other):
         return self == other
 
-    def to_dict(self) -> Dict:
-        return {
-            "adj_kind": self.adjective_kind.str_val
-        }
+    def store(self) -> str:
+        return "{}".format(AdjectiveKind.str_val(self.adjective_kind))
     @staticmethod
-    def from_dict(data) -> 'AdverbDictData':
-        return AdverbDictData(data["adj_kind"])
+    def load(data) -> 'AdverbDictData':
+        return AdverbDictData.from_str(data)
 
     @staticmethod
     def from_str(s: str):
@@ -966,7 +914,7 @@ class AdverbInflData:
         self.adjective_kind_output = adjective_kind_output
 
     def matches(self, dict_entry: AdverbDictData) -> bool:
-        assert isinstance(dict_entry, AdverbDictData)
+        # assert isinstance(dict_entry, AdverbDictData)
         return dict_entry.adjective_kind == self.adjective_kind_key
 
     @staticmethod
@@ -989,19 +937,15 @@ class NumberDictData:
         self.number_kind: NumberKind = number_kind
         self.numeric_value: str = numeric_value
 
-    def to_dict(self) -> Dict:
-        return {
-            "decl": self.declention,
-            "decl_var": self.declention_variant,
-            "number_kind": self.number_kind.str_val,
-            "numeric_value": self.numeric_value
-        }
+    def store(self) -> str:
+        return "{} {} {} {}".format(self.declention, self.declention_variant, NumberKind.str_val(self.number_kind), self.numeric_value)
     @staticmethod
-    def from_dict(data) -> 'NumberDictData':
-        return NumberDictData(DeclentionType(data['decl']),
-                              DeclentionSubtype(data['decl_var']),
-                              NumberKind.from_str(data["number_kind"]),
-                              data["numeric_value"])
+    def load(data) -> 'NumberDictData':
+        data = data.split(" ")
+        return NumberDictData(DeclentionType(int(data[0])),
+                               DeclentionSubtype(int(data[1])),
+                               NumberKind.from_str(data[2]),
+                               data[3])
 
     def __eq__(self, other):
         return isinstance(other, NumberDictData) and \
@@ -1044,7 +988,7 @@ class NumberInflData(InflDataWithDeclention):
                                NumberKind.from_str(m.group(6)))
 
     def matches(self, dict_entry: NumberDictData) -> bool:
-        assert isinstance(dict_entry, NumberDictData)
+        # assert isinstance(dict_entry, NumberDictData)
         return declention_type_matches(self.declention, dict_entry.declention) and \
                declention_subtype_matches(self.declention_variant, dict_entry.declention_variant)
 
@@ -1083,28 +1027,26 @@ POS_INFL_ENTRY_CLASS_MP: Dict[PartOfSpeech, Any] = {
 class DictionaryKey:
     def __init__(self,
                  stems: StemGroup,
-                 part_of_speach: PartOfSpeech,
+                 part_of_speech: PartOfSpeech,
                  pos_data,
                  lemma: 'DictionaryLemma' = None):
         # inflection stuff
         self.stems = stems
-        self.part_of_speach = part_of_speach
+        self.part_of_speech = part_of_speech
         self.pos_data = pos_data
         self.lemma: 'DictionaryLemma' = lemma  # type: ignore  # this should be filled in by the DictionaryLemma class
         # self.lemma_index: int = 0
 
-    def to_dict(self) -> Dict:
-        return {
-            'stems': self.stems,
-            'pos': self.part_of_speach.str_val,
-            'data': self.pos_data.to_dict(),
-        }
+    def store(self, empty_stem="xxxxx", null_stem="zzz") -> str:
+        return "{} {} {} {} {} {}".format(*[(s if s is not "" else empty_stem) if s is not None else null_stem for s in self.stems],
+                                          PartOfSpeech.str_val(self.part_of_speech), self.pos_data.store())
     @staticmethod
-    def from_dict(data) -> 'DictionaryKey':
-        pos = PartOfSpeech.from_str(data['pos'])
-        return DictionaryKey(data['stems'],
+    def load(data) -> 'DictionaryKey':
+        data=data.split(" ", maxsplit=5)
+        pos = PartOfSpeech.from_str(data[4])
+        return DictionaryKey(tuple([None if d == "None" else d for d in data[0:4]]),
                              pos,
-                             POS_DICT_ENTRY_CLASS_MP[pos].from_dict(data['data']))
+                             POS_DICT_ENTRY_CLASS_MP[pos].load(data[5]))
 
     def make_form(self, infl: Optional['InflectionRule'], default="NULL_FORM") -> str:
         if infl is None or self.stems[infl.stem_key - 1] is None:
@@ -1114,72 +1056,72 @@ class DictionaryKey:
         return stem + infl.ending
 
     def alternate_form_match(self, o: 'DictionaryKey') -> bool:
-        return self.part_of_speach == o.part_of_speach and self.pos_data.alternate_form_match(o.pos_data)
+        return self.part_of_speech == o.part_of_speech and self.pos_data.alternate_form_match(o.pos_data)
 
     @property
     def pronoun_data(self) -> PronounDictData:
-        assert isinstance(self.pos_data, PronounDictData)
+        # assert isinstance(self.pos_data, PronounDictData)
         return self.pos_data
 
     @property
     def noun_data(self) -> NounDictData:
-        assert isinstance(self.pos_data, NounDictData)
+        # assert isinstance(self.pos_data, NounDictData)
         return self.pos_data
 
     @property
     def verb_data(self) -> VerbDictData:
-        assert isinstance(self.pos_data, VerbDictData)
+        # assert isinstance(self.pos_data, VerbDictData)
         return self.pos_data
 
     @property
     def preposition_data(self) -> PrepositionDictData:
-        assert isinstance(self.pos_data, PrepositionDictData)
+        # assert isinstance(self.pos_data, PrepositionDictData)
         return self.pos_data
 
     @property
     def interjection_data(self) -> InterjectionDictData:
-        assert isinstance(self.pos_data, InterjectionDictData)
+        # assert isinstance(self.pos_data, InterjectionDictData)
         return self.pos_data
 
     @property
     def adjective_data(self) -> AdjectiveDictData:
-        assert isinstance(self.pos_data, AdjectiveDictData)
+        # assert isinstance(self.pos_data, AdjectiveDictData)
         return self.pos_data
 
     @property
     def adverb_data(self) -> AdverbDictData:
-        assert isinstance(self.pos_data, AdverbDictData)
+        # assert isinstance(self.pos_data, AdverbDictData)
         return self.pos_data
 
     @property
     def conjunction_data(self) -> ConjunctionDictData:
-        assert isinstance(self.pos_data, ConjunctionDictData)
+        # assert isinstance(self.pos_data, ConjunctionDictData)
         return self.pos_data
 
     @property
     def number_data(self) -> NumberDictData:
-        assert isinstance(self.pos_data, NumberDictData)
+        # assert isinstance(self.pos_data, NumberDictData)
         return self.pos_data
 
     @property
     def packon_data(self) -> PackonDictData:
-        assert isinstance(self.pos_data, PackonDictData)
+        # assert isinstance(self.pos_data, PackonDictData)
         return self.pos_data
 
 
 class DictionaryLemma:
     def __init__(self,
-                 part_of_speach: PartOfSpeech,
+                 part_of_speech: PartOfSpeech,
                  dictionary_keys: List[DictionaryKey],  # the first key is considered the main form usually, but a formatter can choose
                  translation_metadata: 'TranslationMetadata',
                  definition: 'str',
                  html_data: Optional[str],
                  index: int):
         # inflection stuff
-        self.part_of_speach = part_of_speach
+        self.part_of_speech = part_of_speech
         self.dictionary_keys = dictionary_keys
         for key in dictionary_keys:
-            assert key.part_of_speach == self.part_of_speach
+            assert key.part_of_speech == self.part_of_speech
             key.lemma = self
         self.translation_metadata: TranslationMetadata = translation_metadata
 
@@ -1190,20 +1132,23 @@ class DictionaryLemma:
         # formating
         self.index = index
 
-    def to_dict(self, header=False) -> Dict:
+    # def get_main_key(self) -> 'DictionaryKey':
+    #     return self.dictionary_keys[0]
+
+    def store(self, header=False) -> Dict:
         return {
-            'pos': self.part_of_speach.str_val,
-            'keys': [key.to_dict() for key in self.dictionary_keys],
-            'metadata': self.translation_metadata.to_str() if not header else "",
+            'pos': PartOfSpeech.str_val(self.part_of_speech),
+            'keys': [key.store() for key in self.dictionary_keys],
+            'metadata': self.translation_metadata.to_str(),
             'def': self.definition if not header else "",
             'html': self.html_data if not header else "",
             'index': self.index
         }
 
     @staticmethod
-    def from_dict(data) -> 'DictionaryLemma':
+    def load(data) -> 'DictionaryLemma':
         return DictionaryLemma(PartOfSpeech.from_str(data['pos']),
-                               [DictionaryKey.from_dict(key) for key in data['keys']],
+                               [DictionaryKey.load(key) for key in data['keys']],
                                TranslationMetadata(data['metadata']),
                                data['def'],
                                data['html'],
@@ -1211,13 +1156,13 @@ class DictionaryLemma:
 
     def rebuild(self, index: int) -> None:
         for key in self.dictionary_keys:
-            assert key.part_of_speach == self.part_of_speach, (key.part_of_speach, self.part_of_speach)
+            assert key.part_of_speech == self.part_of_speech, (key.part_of_speech, self.part_of_speech)
             key.lemma = self
         self.index = index
 
         # (self,
         #          stems: StemGroup,
-        #          part_of_speach: PartOfSpeech,
+        #          part_of_speech: PartOfSpeech,
         #          dictionary_entry,
         #          translation_metadata: 'TranslationMetadata',
         #          definition: 'Definiton',
@@ -1227,7 +1172,7 @@ class DictionaryLemma:
         #
         # # inflection stuff
         # self.stems = stems
-        # self.part_of_speach = part_of_speach
+        # self.part_of_speech = part_of_speech
         # self.dictionary_entry = dictionary_entry
         # self.translation_metadata: TranslationMetadata = translation_metadata
         #
@@ -1248,65 +1193,65 @@ class DictionaryLemma:
     #
     # @property
     # def pronoun_data(self) -> PronounDictData:
-    #     assert isinstance(self.dictionary_entry, PronounDictData)
+    #     # assert isinstance(self.dictionary_entry, PronounDictData)
     #     return self.dictionary_entry
     #
     # @property
     # def noun_data(self) -> NounDictData:
-    #     assert isinstance(self.dictionary_entry, NounDictData)
+    #     # assert isinstance(self.dictionary_entry, NounDictData)
     #     return self.dictionary_entry
     #
     # @property
     # def verb_data(self) -> VerbDictData:
-    #     assert isinstance(self.dictionary_entry, VerbDictData)
+    #     # assert isinstance(self.dictionary_entry, VerbDictData)
     #     return self.dictionary_entry
     #
     # @property
     # def preposition_data(self) -> PrepositionDictData:
-    #     assert isinstance(self.dictionary_entry, PrepositionDictData)
+    #     # assert isinstance(self.dictionary_entry, PrepositionDictData)
     #     return self.dictionary_entry
     #
     # @property
     # def interjection_data(self) -> InterjectionDictData:
-    #     assert isinstance(self.dictionary_entry, InterjectionDictData)
+    #     # assert isinstance(self.dictionary_entry, InterjectionDictData)
     #     return self.dictionary_entry
     #
     # @property
     # def adjective_data(self) -> AdjectiveDictData:
-    #     assert isinstance(self.dictionary_entry, AdjectiveDictData)
+    #     # assert isinstance(self.dictionary_entry, AdjectiveDictData)
     #     return self.dictionary_entry
     #
     # @property
     # def adverb_data(self) -> AdverbDictData:
-    #     assert isinstance(self.dictionary_entry, AdverbDictData)
+    #     # assert isinstance(self.dictionary_entry, AdverbDictData)
     #     return self.dictionary_entry
     #
     # @property
     # def conjunction_data(self) -> ConjunctionDictData:
-    #     assert isinstance(self.dictionary_entry, ConjunctionDictData)
+    #     # assert isinstance(self.dictionary_entry, ConjunctionDictData)
     #     return self.dictionary_entry
     #
     # @property
     # def number_data(self) -> NumberDictData:
-    #     assert isinstance(self.dictionary_entry, NumberDictData)
+    #     # assert isinstance(self.dictionary_entry, NumberDictData)
     #     return self.dictionary_entry
     #
     # @property
     # def packon_data(self) -> PackonDictData:
-    #     assert isinstance(self.dictionary_entry, PackonDictData)
+    #     # assert isinstance(self.dictionary_entry, PackonDictData)
     #     return self.dictionary_entry
 
 
 class InflectionRule:
     def __init__(self,
-                 part_of_speach: PartOfSpeech,
+                 part_of_speech: PartOfSpeech,
                  pos_data,
                  stem_key: int,
                  ending: str,
                  age: InflectionAge,
                  frequency: InflectionFrequency,
                  index: int):
-        self.part_of_speach = part_of_speach
+        self.part_of_speech = part_of_speech
         self.pos_data = pos_data
         self.stem_key = stem_key
         self.ending = ending
@@ -1322,62 +1267,62 @@ class InflectionRule:
 
     @property
     def pronoun_data(self) -> PronounInflData:
-        assert isinstance(self.pos_data, PronounInflData)
+        # assert isinstance(self.pos_data, PronounInflData)
         return self.pos_data
 
     @property
     def noun_data(self) -> NounInflData:
-        assert isinstance(self.pos_data, NounInflData)
+        # assert isinstance(self.pos_data, NounInflData)
         return self.pos_data
 
     @property
     def verb_data(self) -> VerbInflData:
-        assert isinstance(self.pos_data, VerbInflData)
+        # assert isinstance(self.pos_data, VerbInflData)
         return self.pos_data
 
     @property
     def preposition_data(self) -> PrepositionInflData:
-        assert isinstance(self.pos_data, PrepositionInflData)
+        # assert isinstance(self.pos_data, PrepositionInflData)
         return self.pos_data
 
     @property
     def interjection_data(self) -> InterjectionInflData:
-        assert isinstance(self.pos_data, InterjectionInflData)
+        # assert isinstance(self.pos_data, InterjectionInflData)
         return self.pos_data
 
     @property
     def adjective_data(self) -> AdjectiveInflData:
-        assert isinstance(self.pos_data, AdjectiveInflData)
+        # assert isinstance(self.pos_data, AdjectiveInflData)
         return self.pos_data
 
     @property
     def adverb_data(self) -> AdverbInflData:
-        assert isinstance(self.pos_data, AdverbInflData)
+        # assert isinstance(self.pos_data, AdverbInflData)
         return self.pos_data
 
     @property
     def conjunction_data(self) -> ConjunctionInflData:
-        assert isinstance(self.pos_data, ConjunctionInflData)
+        # assert isinstance(self.pos_data, ConjunctionInflData)
         return self.pos_data
 
     @property
     def number_data(self) -> NumberInflData:
-        assert isinstance(self.pos_data, NumberInflData)
+        # assert isinstance(self.pos_data, NumberInflData)
         return self.pos_data
 
     @property
     def packon_data(self) -> PackonInflData:
-        assert isinstance(self.pos_data, PackonInflData)
+        # assert isinstance(self.pos_data, PackonInflData)
         return self.pos_data
 
     @property
     def participle_entry(self) -> ParticipleInflData:
-        assert isinstance(self.pos_data, ParticipleInflData)
+        # assert isinstance(self.pos_data, ParticipleInflData)
         return self.pos_data
 
     @property
     def supine_entry(self) -> SupineInflData:
-        assert isinstance(self.pos_data, SupineInflData)
+        # assert isinstance(self.pos_data, SupineInflData)
         return self.pos_data
 
 
@@ -1401,11 +1346,11 @@ class TranslationMetadata:
         self.age: DictionaryAge = DictionaryAge.from_str(s[0])
         self.area: str = s[2]
         self.geo: str = s[4]
-        self.freqency: DictionaryFrequency = DictionaryFrequency.from_str(s[6])
+        self.frequency: DictionaryFrequency = DictionaryFrequency.from_str(s[6])
         self.source: str = s[8]
 
     def to_str(self) -> str:
-        return "{} {} {} {} {}".format(self.age.str_val, self.area, self.geo, self.freqency.str_val, self.source)
+        return "{} {} {} {} {}".format(DictionaryAge.str_val(self.age), self.area, self.geo, DictionaryFrequency.str_val(self.frequency), self.source)
 
 ########################################################################################################################
 ########################################################################################################################
@@ -1429,7 +1374,7 @@ class PrefixEntry:
         self.explination = l3
 
     def accepts_infl(self, infl: InflectionRule) -> bool:
-        return infl.part_of_speach == self.match_pos or self.match_pos == PartOfSpeech.X
+        return infl.part_of_speech == self.match_pos or self.match_pos == PartOfSpeech.X
 
 
 class SuffixEntry:
@@ -1476,9 +1421,8 @@ class SuffixEntry:
             raise ValueError()
         
     def accepts_infl(self, infl: InflectionRule) -> bool:
-        if self.new_pos != infl.part_of_speach:
+        if self.new_pos != infl.part_of_speech:
             return False
-        # print("POS OK", infl, self.new_stem_key, self.stem_key, infl.stem_key)
         return infl.stem_key == self.new_stem_key or self.new_stem_key == 0
 
     def accepts_stem_dic_key(self, dic: DictionaryKey) -> bool:
@@ -1551,21 +1495,21 @@ class TackonEntry:
         if self.pos == PartOfSpeech.X:
             return True
         elif self.pos == PartOfSpeech.Adjective:
-            return infl.part_of_speach == PartOfSpeech.Adjective and \
+            return infl.part_of_speech == PartOfSpeech.Adjective and \
                    bidir_declention_type_matches(self.decl, infl.adjective_data.declention) and \
                    bidir_declention_subtype_matches(self.decl_var, infl.adjective_data.declention_variant) and \
                    infl.adjective_data.adjective_kind == self.adj_kind
         elif self.pos == PartOfSpeech.Pronoun:
-            return infl.part_of_speach == PartOfSpeech.Pronoun and \
+            return infl.part_of_speech == PartOfSpeech.Pronoun and \
                    bidir_declention_type_matches(self.decl, infl.pronoun_data.declention) and \
                    bidir_declention_subtype_matches(self.decl_var, infl.pronoun_data.declention_variant) # and \
                    # TODO infl.pronoun_data.pron_kind == self.pron_kind
         elif self.pos == PartOfSpeech.Packon:
-            return infl.part_of_speach == PartOfSpeech.Packon and \
+            return infl.part_of_speech == PartOfSpeech.Packon and \
                    declention_type_matches(infl.packon_data.declention, self.decl) and \
                    declention_subtype_matches(infl.packon_data.declention_variant, self.decl_var)
         elif self.pos == PartOfSpeech.Noun:
-            return infl.part_of_speach == PartOfSpeech.Noun and \
+            return infl.part_of_speech == PartOfSpeech.Noun and \
                    bidir_declention_type_matches(self.decl, infl.noun_data.declention) and \
                    bidir_declention_subtype_matches(self.decl_var, infl.noun_data.declention_variant) and \
                    gender_matches(infl.noun_data.gender, self.noun_gender) and \
@@ -1576,7 +1520,7 @@ class TackonEntry:
     def accepts_stem(self, dic: DictionaryKey) -> bool:
         if self.pos != PartOfSpeech.Packon:
             return True
-        if dic.part_of_speach != PartOfSpeech.Packon:
+        if dic.part_of_speech != PartOfSpeech.Packon:
             return False
         return self.tackon == dic.packon_data.tackon_str
 
@@ -1587,19 +1531,28 @@ class UniqueEntry:
         self.l2 = l2
         self.l3 = l3
 
-
 class Lexicon(metaclass=ABCMeta):
     def __init__(self, path):
         self.inflection_list: List[InflectionRule] = []
-        self.dictionary_keys: List[DictionaryKey] = []
-        self.dictionary_lemmata: List[DictionaryLemma] = []
+        self._dictionary_keys: List[DictionaryKey] = []
+        self._dictionary_lemmata: List[DictionaryLemma] = []
         self.prefix_list: List[Optional[PrefixEntry]] = []
         self.suffix_list: List[Optional[SuffixEntry]] = []
         self.tackon_list: List[Optional[TackonEntry]] = []
         self.uniques: Dict[str, UniqueEntry] = {}
         self.map_ending_infls: Dict[str, List[InflectionRule]] = {}
-        self.stem_map: Dict[Tuple[PartOfSpeech, int], Dict[str, List[DictionaryKey]]] = {}
+        self._stem_map: Dict[Tuple[PartOfSpeech, int], Dict[str, List[DictionaryKey]]] = \
+            {(pos, stem_key): {} for pos in PartOfSpeech for stem_key in range(1,5)}
         self.load(path)
+
+    def get_stem_map(self, pos: PartOfSpeech, stem_key: int) -> Dict[str, List[DictionaryKey]]:
+        return self._stem_map[(pos, stem_key)]
+    @property
+    def dictionary_keys(self)-> List[DictionaryKey]:
+        return self._dictionary_keys
+    @property
+    def dictionary_lemmata(self)-> List[DictionaryLemma]:
+        return self._dictionary_lemmata
 
     @abstractmethod
     def load(self, path: str) -> None:
@@ -1607,7 +1560,7 @@ class Lexicon(metaclass=ABCMeta):
 
     def get_noun_inflection_rule(self, declention: DeclentionType, declention_varient: DeclentionSubtype, gender: Gender, case: Case, number: Number) -> Optional[InflectionRule]:
         l = [infl for infl in self.inflection_list if
-             infl.part_of_speach == PartOfSpeech.Noun and
+             infl.part_of_speech == PartOfSpeech.Noun and
              declention_type_matches(infl.noun_data.declention, declention) and
              declention_subtype_matches(infl.noun_data.declention_variant, declention_varient) and
              gender_matches(infl.noun_data.gender, gender) and
@@ -1618,7 +1571,7 @@ class Lexicon(metaclass=ABCMeta):
 
     def get_number_inflection_rule(self, declention: DeclentionType, declention_varient: DeclentionSubtype, gender: Gender, case: Case, number: Number, number_kind: NumberKind) -> Optional[InflectionRule]:
         l = [infl for infl in self.inflection_list if
-             infl.part_of_speach == PartOfSpeech.Number and
+             infl.part_of_speech == PartOfSpeech.Number and
              declention_type_matches(infl.number_data.declention, declention) and
              declention_subtype_matches(infl.number_data.declention_variant, declention_varient) and
              gender_matches(infl.number_data.gender, gender) and
@@ -1630,7 +1583,7 @@ class Lexicon(metaclass=ABCMeta):
 
     def get_pronoun_inflection_rule(self, declention: DeclentionType, declention_varient: DeclentionSubtype, gender: Gender, case: Case, number: Number) -> Optional[InflectionRule]:
         l = [infl for infl in self.inflection_list if
-             infl.part_of_speach == PartOfSpeech.Pronoun and
+             infl.part_of_speech == PartOfSpeech.Pronoun and
              declention_type_matches(infl.pronoun_data.declention, declention) and
              declention_subtype_matches(infl.pronoun_data.declention_variant, declention_varient) and
              gender_matches(infl.pronoun_data.gender, gender) and
@@ -1641,7 +1594,7 @@ class Lexicon(metaclass=ABCMeta):
 
     def get_adjective_inflection_rule(self, declention: DeclentionType, declention_varient: DeclentionSubtype, gender: Gender, case: Case, number: Number, adjective_kind: AdjectiveKind) -> Optional[InflectionRule]:
         l = [infl for infl in self.inflection_list if
-             infl.part_of_speach == PartOfSpeech.Adjective and
+             infl.part_of_speech == PartOfSpeech.Adjective and
              declention_type_matches(infl.adjective_data.declention, declention) and
              declention_subtype_matches(infl.adjective_data.declention_variant, declention_varient) and
              gender_matches(infl.adjective_data.gender, gender) and
@@ -1653,7 +1606,7 @@ class Lexicon(metaclass=ABCMeta):
 
     def get_verb_inflection_rule(self, conjugation: ConjugationType, conjugation_variant: ConjugationSubtype, number: Number, person: Person, voice: Voice, tense: Tense, mood: Mood) -> Optional[InflectionRule]:
         l = sorted([infl for infl in self.inflection_list if
-             infl.part_of_speach == PartOfSpeech.Verb and
+             infl.part_of_speech == PartOfSpeech.Verb and
              conjugation_type_matches(infl.verb_data.conjugation, conjugation) and
              conjugation_subtype_matches(infl.verb_data.conjugation_variant, conjugation_variant) and
              infl.verb_data.number == number and
@@ -1667,7 +1620,7 @@ class Lexicon(metaclass=ABCMeta):
 
     def get_participle_inflection_rule(self, conjugation: ConjugationType, conjugation_variant: ConjugationSubtype, number: Number, case: Case, voice: Voice, tense: Tense) -> Optional[InflectionRule]:
         l = [infl for infl in self.inflection_list if
-             infl.part_of_speach == PartOfSpeech.Participle and
+             infl.part_of_speech == PartOfSpeech.Participle and
              conjugation_type_matches(infl.participle_entry.conjugation, conjugation) and
              conjugation_subtype_matches(infl.participle_entry.conjugation_variant, conjugation_variant) and
              infl.participle_entry.number == number and
@@ -1678,10 +1631,155 @@ class Lexicon(metaclass=ABCMeta):
 
     def get_adverb_inflection_rule(self, adjective_kind_key: AdjectiveKind, adjective_kind_output: AdjectiveKind) -> Optional[InflectionRule]:
         l = [infl for infl in self.inflection_list if
-             infl.part_of_speach == PartOfSpeech.Adverb and
+             infl.part_of_speech == PartOfSpeech.Adverb and
              infl.adverb_data.adjective_kind_key == adjective_kind_key and
              infl.adverb_data.adjective_kind_output == adjective_kind_output]
         return l[0] if len(l) > 0 else None
+
+
+class NormalLexicon(Lexicon, metaclass=ABCMeta):
+    def __init__(self, path):
+        Lexicon.__init__(self, path)
+
+    def load(self, path: str):
+        self.load_inflections(path)
+        self.load_dictionary(path)
+        self.load_addons(path)
+        self.load_uniques(path)
+
+    def _add_inflection_rule(self, pos: PartOfSpeech, m, line, index):
+        assert m is not None
+        inflection_data = POS_INFL_ENTRY_CLASS_MP[pos].from_str(m.group(2))
+        stem_key = int(m.group(3))
+        ending_len = int(m.group(4))
+        ending = m.group(5)
+
+        assert len(ending) == ending_len, (line, ending, ending_len)
+
+        if not ending in self.map_ending_infls:
+            self.map_ending_infls[ending] = []
+        rule = InflectionRule(pos,
+                                inflection_data,
+                                stem_key,
+                                ending,
+                                InflectionAge.from_str(m.group(6)),
+                                InflectionFrequency.from_str(m.group(7)),
+                                index)
+
+        self.inflection_list.append(rule)
+        self.map_ending_infls[ending].append(rule)
+
+    def load_inflections(self, path):
+        index = 0  # this might be useful to a formater by specifying the order that the entries are in the dictionary
+        with open(path + "/DataFiles/INFLECTS.txt", encoding="ISO-8859-1") as ifile:
+            for line in ifile:
+                line = line.strip().split("--")[0].strip()
+                if line.strip() == "":
+                    continue
+
+                m = re.match(r"(\S*) +(.*) +(\d) (\d) (\S*) +(\S) (\S)", line)
+                assert m is not None
+                part_of_speech = PartOfSpeech.from_str(m.group(1))
+                self._add_inflection_rule(part_of_speech, m, line, index)
+                index +=1
+                if part_of_speech == PartOfSpeech.Pronoun:
+                    # this allows us to conjugate packons as well
+                    self._add_inflection_rule(PartOfSpeech.Packon, m, line, index)
+                    index +=1
+
+    def insert_lemma(self, lemma: DictionaryLemma, index: int):
+        # function to generate alternate forms for each stem by applying i,j and u,v substitiutions, and
+        def alternate_forms_of_stem(stem: str) -> Generator[str, None, None]:
+            def subs_in_locs(stem: str, locs: Tuple[int, ...], replacement: str):
+                for k in locs:
+                    stem = stem[:k] + replacement + stem[k + 1:]
+                return stem
+
+            import itertools
+            stem = stem.lower()
+            indx_j = [i for i, c in enumerate(stem) if c == 'j']
+            indx_v = [i for i, c in enumerate(stem) if c == 'v' if i > 0]
+            for locs_i in itertools.chain.from_iterable(
+                    itertools.combinations(indx_j, n) for n in range(len(indx_j) + 1)):
+                for locs_u in itertools.chain.from_iterable(
+                        itertools.combinations(indx_v, n) for n in range(len(indx_v) + 1)):
+                    s = subs_in_locs(subs_in_locs(stem, locs_i, "i"), locs_u, "u")
+                    if len(s) > 1 and s[0] in {'u', 'v'}:
+                        yield 'u' + s[1:]
+                        yield 'v' + s[1:]
+                    else:
+                        yield s
+
+        lemma.rebuild(index)
+        self.dictionary_lemmata.append(lemma)
+        for key in lemma.dictionary_keys:
+            self.dictionary_keys.append(key)
+            for stem_base, i in zip(key.stems, [1, 2, 3, 4]):
+                if stem_base is None:
+                    continue
+                for stem in alternate_forms_of_stem(stem_base):
+                    if not stem in self._stem_map[(lemma.part_of_speech, i)]:
+                        self._stem_map[(lemma.part_of_speech, i)][stem] = []
+                    self._stem_map[(lemma.part_of_speech, i)][stem].append(key)
+
+    @abstractmethod
+    def load_dictionary(self, path: str):
+        pass
+
+    def load_addons(self, path: str):
+        self.prefix_list.append(None)
+        self.suffix_list.append(None)
+        self.tackon_list.append(None)
+        with open(path + "DataFiles/ADDONS.txt", encoding="ISO-8859-1") as ifile:
+            lines = [line[:-1].split("--")[0] for line in ifile if line.split("--")[0] != ""]
+        assert len(lines) % 3 == 0
+        while len(lines) > 0:
+            l1, l2, l3 = lines[0], lines[1], lines[2]
+            lines = lines[3:]
+            kind = l1[:6]
+            if kind == "PREFIX":
+                self.prefix_list.append(PrefixEntry(l1, l2, l3))
+            elif kind == "SUFFIX":
+                self.suffix_list.append(SuffixEntry(l1, l2, l3))
+            elif kind == "TACKON":
+                self.tackon_list.append(TackonEntry(l1, l2, l3))
+            else:
+                raise ValueError(lines)
+
+
+    def load_uniques(self, path: str):
+        with open(path + "DataFiles/UNIQUES.txt", encoding="ISO-8859-1") as ifile:
+            lines = [line[:-1].split("--")[0] for line in ifile if line.split("--")[0] != ""]
+        assert len(lines) % 3 == 0
+        while len(lines) > 0:
+            l1, l2, l3 = lines[0], lines[1], lines[2]
+            lines = lines[3:]
+            kind = l1[:6]
+            u = UniqueEntry(l1, l2, l3)
+            self.uniques[u.word] = u
+
+# The hope is that this case silently replace normal Lexicons, which being faster to load and MUCH lower memory usage
+# which is good on my server. It uses the code in low_memory_stems, which is c++ code that is backed by swig
+class CppDictLexicon(NormalLexicon, metaclass=ABCMeta):
+    def __init__(self, path: str, dict_file: str):
+        self.dict_file = dict_file
+        NormalLexicon.__init__(self, path)
+
+    def load_dictionary(self, path: str):
+        import PyWhitakersWords.low_memory_stems.fast_dict_keys as fdk
+        self.dict_object = fdk.DictionaryStemCollection()
+        cpp_file = path + "/" + self.dict_file
+        print("LOADING CPP FILE", cpp_file)
+        self.dict_object.load(cpp_file)
+
+    def get_stem_map(self, pos: PartOfSpeech, stem_key: int) -> Dict[str, List[DictionaryKey]]:
+        return self.dict_object.get_stem_dict_view_for(int(pos), stem_key)
+    @property
+    def dictionary_keys(self)-> List[DictionaryKey]:
+        return self.dict_object.all_keys
+    @property
+    def dictionary_lemmata(self)-> List[DictionaryKey]:
+        return self.dict_object.all_lemmata
 
 
 class Formater(metaclass=ABCMeta):

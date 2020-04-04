@@ -142,17 +142,17 @@ def group_dic_infl_pairs(matched_dic_key_infl_rule_pairs: List[Tuple[DictionaryK
     lemma_forms_map: Dict[str, Tuple[DictionaryLemma, List[Tuple[DictionaryKey, InflectionRule]]]] = {k: (None, []) for k in KEYS}  # gather the inflection for each dictionary entry
     for dic_key, infl_rule in matched_dic_key_infl_rule_pairs:
         if dic_key.lemma.dictionary_keys[0].stems[0] == 'qu' and dic_key.lemma.dictionary_keys[0].stems[1] in {None, 'cu'}\
-                and dic_key.part_of_speach == PartOfSpeech.Pronoun:
+                and dic_key.part_of_speech == PartOfSpeech.Pronoun:
             lemma_forms_map['qu'][1].append((dic_key, infl_rule))
         elif dic_key.lemma.dictionary_keys[0].stems[0] == 'qu' and dic_key.lemma.dictionary_keys[0].stems[1] in {None, 'cu'}\
-                and dic_key.part_of_speach == PartOfSpeech.Packon:
+                and dic_key.part_of_speech == PartOfSpeech.Packon:
             lemma_forms_map[dic_key.packon_data.tackon_str][1].append((dic_key, infl_rule))
         elif dic_key.lemma.dictionary_keys[0].stems[0] == 'aliqu' and dic_key.lemma.dictionary_keys[0].stems[1] in {None, 'alicu'}:
             lemma_forms_map['aliqu'][1].append((dic_key, infl_rule))
         else:
-            if not str(dic_key.lemma) in lemma_forms_map:
-                lemma_forms_map[str(dic_key.lemma)] = (dic_key.lemma, [])
-            lemma_forms_map[str(dic_key.lemma)][1].append((dic_key, infl_rule))
+            if not dic_key.lemma.index in lemma_forms_map:
+                lemma_forms_map[dic_key.lemma.index] = (dic_key.lemma, [])
+            lemma_forms_map[dic_key.lemma.index][1].append((dic_key, infl_rule))
 
     # print("LEMMA FORMS MAP", lemma_forms_map)
     grouped_list = []
@@ -248,26 +248,31 @@ def get_inner_matches(lex: Lexicon,
 
             possible_stem = clip_end(word, len(infl.ending) + len(suffix_ending))
             if suffix is None:
-                stem_pos = PartOfSpeech.Verb if infl.part_of_speach in \
+                stem_pos = PartOfSpeech.Verb if infl.part_of_speech in \
                                                 {PartOfSpeech.Supine,
-                                                 PartOfSpeech.Participle} else infl.part_of_speach
+                                                 PartOfSpeech.Participle} else infl.part_of_speech
                 stem_key = infl.stem_key
             else:
                 stem_pos = suffix.stem_pos
                 stem_key = suffix.stem_key
 
-            if possible_stem in lex.stem_map[(stem_pos, stem_key)]:
-                # print("  POS STEM:", possible_stem)
-                for entry in lex.stem_map[(stem_pos, stem_key)][possible_stem]:
-                    # print("  ", entry.part_of_speach, entry.stems)
+
+            # THIS CODE IS CLUNKY, BUT MAKES CODING THE C++ EASIER
+            # print(stem_pos, stem_key)
+            stem_map = lex.get_stem_map(stem_pos, stem_key)
+            if possible_stem in stem_map:
+                possible_entrys = stem_map[possible_stem]
+                for i in range(len(possible_entrys)):
+                    entry = possible_entrys[i]
+                    # print(entry, entry.part_of_speech)
+                    # DONE WITH CLUNKY PART
+
                     if tackon is not None and not tackon.accepts_stem(entry):
                         continue
-                    if entry.part_of_speach == PartOfSpeech.Packon and not entry.packon_data.accepts_tackon(tackon):
+                    if entry.part_of_speech == PartOfSpeech.Packon and not entry.packon_data.accepts_tackon(tackon):
                         continue  # we cant have a PACKON without a TACKON
-                    # print("    TACKON ACCEPTS:", entry, entry.part_of_speach)
                     if suffix is None:
                         if infl.pos_data.matches(entry.pos_data):
-                            # print("      ALL GOOD:", entry)
                             matched_dic_infl_pairs.append((entry, infl))
                     elif suffix.accepts_stem_dic_key(entry):
                         if infl.pos_data.matches(suffix.fake_dictionary_entry):
@@ -290,7 +295,7 @@ def get_syncopy_matches(lex: Lexicon,
     for i in [i for i in range(len(word)-1) if word.lower()[i: i+2] == "ii"]:
         word_prime = word[:i] + "ivi" + word[i+2:]
         matches = [(dic, infl) for dic, infl in get_inner_matches(lex, word_prime.lower(), tackon, prefix, suffix)
-                   if infl.part_of_speach == PartOfSpeech.Verb and
+                   if infl.part_of_speech == PartOfSpeech.Verb and
                    (dic.verb_data.conjugation, dic.verb_data.conjugation_variant) in {(3,4), (6,1)} and
                    infl.stem_key == 3]
         if len(matches) > 0:
@@ -301,7 +306,7 @@ def get_syncopy_matches(lex: Lexicon,
         word_prime = word[:i+1] + "vi" + word[i+1:]
         # print("WORDPRIME2", word, word_prime)
         matches = [(dic, infl) for dic, infl in get_inner_matches(lex, word_prime.lower(), tackon, prefix, suffix) if
-                   infl.part_of_speach == PartOfSpeech.Verb and infl.stem_key == 3]
+                   infl.part_of_speech == PartOfSpeech.Verb and infl.stem_key == 3]
         if len(matches) > 0:
             return matches, "Syncope  *vis => *s\nSyncopated perfect often drops the 'v' and contracts vowel", word_prime
 
@@ -312,7 +317,7 @@ def get_syncopy_matches(lex: Lexicon,
         inner = get_inner_matches(lex, word_prime.lower(), tackon, prefix, suffix)
         # print(len(inner), inner)
         matches = [(dic, infl) for dic, infl in inner if
-                   infl.part_of_speach == PartOfSpeech.Verb] # and infl.stem_key == 3], because we want to accept
+                   infl.part_of_speech == PartOfSpeech.Verb] # and infl.stem_key == 3], because we want to accept
 
         if all(infl.stem_key != 3 for dic, infl in matches):
             matches = []
@@ -325,7 +330,7 @@ def get_syncopy_matches(lex: Lexicon,
         word_prime = word[:i] + "iver" + word[i+3:]
 
         matches = [(dic, infl) for dic, infl in get_inner_matches(lex, word_prime.lower(), tackon, prefix, suffix) if
-                   infl.part_of_speach == PartOfSpeech.Verb and infl.stem_key == 3]
+                   infl.part_of_speech == PartOfSpeech.Verb and infl.stem_key == 3]
         if len(matches) > 0:
             return matches, "Syncope  iver => ier\nSyncopated perfect often drops the 'v' and contracts vowel", word_prime
 
@@ -333,7 +338,7 @@ def get_syncopy_matches(lex: Lexicon,
     for i in [i for i in range(len(word)-2) if word.lower()[i] in {"s", "x"}]:
         word_prime = word[:i+1] + "is" + word[i+1:]
         matches = [(dic, infl) for dic, infl in get_inner_matches(lex, word_prime.lower(), tackon, prefix, suffix) if
-                   infl.part_of_speach == PartOfSpeech.Verb and infl.stem_key == 3]
+                   infl.part_of_speech == PartOfSpeech.Verb and infl.stem_key == 3]
         if len(matches) > 0:
             return matches, "Syncope  [s|x]is => [s|x]\nSyncopated perfect sometimes drops the 'is' after 's' or 'x'", word_prime
 
