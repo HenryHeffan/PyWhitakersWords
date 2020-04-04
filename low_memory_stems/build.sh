@@ -5,7 +5,7 @@ mkdir build
 rm -f fast_dict_keys.py
 rm -f _fast_dict_keys.so
 
-python3 generate_code.py &&
+python3.6 generate_code.py &&
 cp data_structures.cpp build/data_structures.cpp &&
 cp data_structures.h build/data_structures.h &&
 cp fast_dict_keys.i build/fast_dict_keys.i &&
