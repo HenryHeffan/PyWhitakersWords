@@ -90,7 +90,7 @@ PackonDictData.accepts_tackon = lambda self, tackon: tackon is not None and tack
 
 DictionaryKey.make_form = make_form
 
-from PyWhitakersWords.utils import load_utf_str
+from core_files.utils import load_utf_str
 DictionaryLemma.html_data = property(lambda x: load_utf_str(x._stored_html_data))
 
 # remove a bunch of unneeded constants

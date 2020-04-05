@@ -1,10 +1,11 @@
-from PyWhitakersWords.entry_and_inflections import *
-
+from core_files.entry_and_inflections import *
+from core_files.utils import *
+import io
+open = io.open
 import re
 import enum
-from typing import NewType, Tuple, List, Dict, Optional, Any, Union, Generator
-from abc import abstractmethod
-
+# from typing import NewType, Tuple, List, Dict, Optional, Any, Union, Generator
+# from abc import abstractmethod
 ########################################################################################################################
 ########################################################################################################################
 #                                     classes to store the results from queries                                        #

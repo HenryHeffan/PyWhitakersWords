@@ -166,7 +166,8 @@ istream& operator>>(istream& is, DictionaryLemma& e)
 
 vector<string> alternate_forms_of_stem(string stem) {
     //cerr<<"NEW CALL "<<stem<<"\n";
-    transform(stem.begin(), stem.end(), stem.begin(), [](unsigned char c){ return tolower(c); });
+    for(int i = 0; i < stem.length(); i++)
+        stem[i] = tolower(stem[i]);
     //cerr<<"LOWER "<<stem<<"\n";
     vector<int> indx_j = vector<int>();
     vector<int> indx_v = vector<int>();

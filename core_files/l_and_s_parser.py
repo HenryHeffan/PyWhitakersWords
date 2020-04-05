@@ -1,7 +1,9 @@
+# - *- coding: utf- 8 - *-
+
 # import PyWhitakersWords.dictionary_comp.dictionary_compiler
-from PyWhitakersWords.utils import *
-from PyWhitakersWords.entry_and_inflections import *
-from typing import Optional, Tuple, Dict
+from core_files.utils import *
+from core_files.entry_and_inflections import *
+
 import re
 
 NOUN_non_3rd_ENDINGS = [

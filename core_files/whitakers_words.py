@@ -1,24 +1,11 @@
 
+from core_files.entry_and_inflections import *
 
-try:
-    from PyWhitakersWords.entry_and_inflections import *
-except:
-    import os
-    import sys
-
-    abs_pth = os.path.abspath(__file__)
-    PATH = os.path.split(abs_pth)[0]
-    PATH_UP = os.path.split(PATH)[0]
-    PATH += "/"
-    PATH_UP += "/"
-    sys.path.insert(0, PATH_UP)
-    from PyWhitakersWords.entry_and_inflections import *
-
-from PyWhitakersWords.utils import *
-from PyWhitakersWords.searcher import FormGroup, EntryQuery, get_matches
-from typing import Tuple, List
-from abc import abstractmethod
-# from .entry_and_inflections import *
+from core_files.utils import *
+import io
+open = io.open
+from core_files.searcher import FormGroup, EntryQuery, get_matches
+import os.path
 
 
 class WWLexicon(NormalLexicon):
@@ -44,7 +31,7 @@ class WWLexicon(NormalLexicon):
 
         index = 0  # this might be useful to a formater by specifying the order that the entries are in the dictionary
 
-        with open(path + "/DataFiles/DICTLINE.txt", encoding="ISO-8859-1") as ifile:
+        with open(os.path.join(path, "DataFiles/DICTLINE.txt"), encoding="ISO-8859-1") as ifile:
             last_lemma: Optional[DictionaryLemma] = None
             working_lemma: Optional[DictionaryLemma] = None
             for line in ifile:
@@ -1183,12 +1170,12 @@ class WWFormater(Formater):
 
 GLOB_TAB = {}
 
-def init(path: str, no_cache: bool=False) -> Tuple[WWLexicon, WWFormater]:
+def init(path: str, no_cache: bool=False, fast: bool = True) -> Tuple[WWLexicon, WWFormater]:
     if not no_cache and path in GLOB_TAB:
         print("USING CACHE")
         return GLOB_TAB[path]
     # return
-    WW_LEXICON = FastWWLexicon(path)
+    WW_LEXICON = (FastWWLexicon(path) if fast else WWLexicon(path))
     WW_FORMATER = WWFormater(WW_LEXICON,
                              NounFormater(WW_LEXICON),
                              PronounFormater(WW_LEXICON),
@@ -1203,7 +1190,7 @@ def init(path: str, no_cache: bool=False) -> Tuple[WWLexicon, WWFormater]:
     GLOB_TAB[path] = WW_LEXICON, WW_FORMATER
     return WW_LEXICON, WW_FORMATER
 
-from memory_profiler import profile
+# from memory_profiler import profile
 
 # @profile()
 # def test():

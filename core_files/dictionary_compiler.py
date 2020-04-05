@@ -1,24 +1,21 @@
 #!/usr/bin/python3
-
+# - *- coding: utf- 8 - *-
 import os
 import sys
 
-abs_pth = os.path.abspath(__file__)
-PATH = os.path.split(os.path.split(abs_pth)[0])[0]
-PATH_UP = os.path.split(PATH)[0]
-PATH +="/"
-PATH_UP +="/"
-sys.path.insert(0, PATH_UP)
+PATH = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, PATH)
 
 import xml.etree.ElementTree as ET
-from PyWhitakersWords.entry_and_inflections import *
-from PyWhitakersWords.utils import *
-from PyWhitakersWords.dictionary_comp.l_and_s_parser import Entry, parse_entry
-from PyWhitakersWords import whitakers_words
+from core_files.entry_and_inflections import *
+from core_files.utils import *
+from core_files.l_and_s_parser import Entry, parse_entry
+from core_files import whitakers_words
 from typing import Any, IO
 import json
+import os.path
 
-WW_LEXICON, WW_FORMATER = whitakers_words.init(PATH)
+WW_LEXICON, WW_FORMATER = whitakers_words.init(PATH, fast=False)
 
 
 HTML_PREFIX_TEMP = """<!DOCTYPE html>
@@ -106,7 +103,7 @@ Data accessed from https://github.com/PerseusDL/lexica/ [date of access].
 
 
 def get_ls_ents():
-    with open(PATH + 'DataFiles/lewis_and_short.xml') as f:
+    with open(os.path.join(PATH, 'DataFiles/lewis_and_short.xml')) as f:
         s = strip_spec_chars(f.read())
 
 
@@ -137,7 +134,7 @@ def generate_html_dic():
     for e in ls_ents:
         l.extend(e.extract_html())
         l.append("\n")
-    with open(PATH + "GeneratedFiles/lewis_and_short_formated.html", "w") as o:
+    with open(os.path.join(PATH, "GeneratedFiles/lewis_and_short_formated.html"), "w") as o:
         o.write(HTML_PREFIX_TEMP)
         o.write("".join(l))
         o.write("""</body></html>""")
@@ -208,19 +205,19 @@ ND.sort(key=lambda x: x.dictionary_keys[0].stems[0] if x.dictionary_keys[0].stem
 for i, n in enumerate(ND):
     n.rebuild(i)
 
-with open(PATH + "/GeneratedFiles/JOINED.txt", "w", encoding='utf-8') as o:
+with open(os.path.join(PATH, "GeneratedFiles/JOINED.txt"), "w", encoding='utf-8') as o:
     json.dump([n.store() for n in ND], o, indent=1)
 
-with open(PATH + "/GeneratedFiles/JOINED_CPP_FAST.txt", "w") as o:
+with open(os.path.join(PATH, "GeneratedFiles/JOINED_CPP_FAST.txt"), "w") as o:
     for lemma in ND:
         if lemma.part_of_speech != PartOfSpeech.X:
             write_lemma_fast_cpp_format(o, lemma)
 
-import PyWhitakersWords.whitakers_words
-ww, _ = PyWhitakersWords.whitakers_words.init(PATH, no_cache=True)
+import whitakers_words
+ww, _ = whitakers_words.init(PATH, no_cache=True, fast=False)
 for i, n in enumerate(ww.dictionary_lemmata):
     n.rebuild(i)
-with open(PATH + "/GeneratedFiles/DICTLINE_CPP_FAST.txt", "w") as o:
+with open(os.path.join(PATH, "GeneratedFiles/DICTLINE_CPP_FAST.txt"), "w") as o:
     for lemma in ww.dictionary_lemmata:
         write_lemma_fast_cpp_format(o, lemma)
 

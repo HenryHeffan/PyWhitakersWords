@@ -1,8 +1,9 @@
 import re
 import enum
-from typing import NewType, Tuple, List, Dict, Optional, Any, Union, Generator
-from abc import abstractmethod, ABCMeta
-
+from core_files.utils import *
+import io
+open = io.open
+import os.path
 
 ########################################################################################################################
 ########################################################################################################################
@@ -23,6 +24,10 @@ class StringMappedEnum(enum.IntEnum):
     @classmethod
     def str_val(cls, inst) -> str:
         return {a: b for a, b in cls._STR_VALS()}[inst]
+
+    @classmethod
+    def get_name(cls, inst) -> str:
+        return cls(inst).name
 
     @classmethod
     def from_str(cls, s):
@@ -257,14 +262,14 @@ class AdjectiveKind(StringMappedEnum):
 
 
 class InflectionFrequency(StringMappedEnum):
-    X = 9  # ("        ", --  X
-    A = 7  #  "mostfreq", --  A
-    B = 6  #  "sometime", --  B
-    C = 5  #  "uncommon", --  C
-    D = 4  #  "infreq  ", --  D
-    E = 3  #  "rare    ", --  E
-    F = 2  #  "veryrare", --  F
-    I = 1  #  "inscript", --  I
+    X = 7 # ("        ", --  X
+    A = 6  #  "mostfreq", --  A
+    B = 5  #  "sometime", --  B
+    C = 4  #  "uncommon", --  C
+    D = 3  #  "infreq  ", --  D
+    E = 2  #  "rare    ", --  E
+    F = 1  #  "veryrare", --  F
+    I = 0  #  "inscript", --  I
     @staticmethod
     def _STR_VALS():
         return [(InflectionFrequency.X, "X"),
@@ -301,16 +306,16 @@ class InflectionAge(StringMappedEnum):
 
 
 class DictionaryFrequency(StringMappedEnum):
-    X = 10  # ("        ", --  X
-    A = 9  #  "veryfreq", --  A
-    B = 8  #  "frequent", --  B
-    C = 7  #  "common  ", --  C
-    D = 6  #  "lesser  ", --  D
-    E = 5  #  "uncommon", --  E
-    F = 4  #  "veryrare", --  F
-    I = 3  #  "inscript", --  I
-    J = 2  #  "graffiti", --  J
-    N = 1  #  "Pliny   ");--  N
+    X = 9  # ("        ", --  X
+    A = 8  #  "veryfreq", --  A
+    B = 7  #  "frequent", --  B
+    C = 6  #  "common  ", --  C
+    D = 5  #  "lesser  ", --  D
+    E = 4  #  "uncommon", --  E
+    F = 3  #  "veryrare", --  F
+    I = 2  #  "inscript", --  I
+    J = 1  #  "graffiti", --  J
+    N = 0  #  "Pliny   ");--  N
     @staticmethod
     def _STR_VALS():
         return [(DictionaryFrequency.X, "X"),
@@ -356,7 +361,6 @@ class DictionaryAge(StringMappedEnum):
 
 
 # a type decliration to make code more readable later on
-StemGroup = Tuple[Optional[str], Optional[str], Optional[str], Optional[str]]
 
 # helper functions for checking if a dic entry matches an infl
 def declention_type_matches(infl: DeclentionType, dic: DeclentionType) -> bool:
@@ -1038,7 +1042,8 @@ class DictionaryKey:
         # self.lemma_index: int = 0
 
     def store(self, empty_stem="xxxxx", null_stem="zzz") -> str:
-        return "{} {} {} {} {} {}".format(*[(s if s is not "" else empty_stem) if s is not None else null_stem for s in self.stems],
+        stems = [(s if s is not "" else empty_stem) if s is not None else null_stem for s in self.stems]
+        return "{} {} {} {} {} {}".format(stems[0], stems[1], stems[2], stems[3],
                                           PartOfSpeech.str_val(self.part_of_speech), self.pos_data.store())
     @staticmethod
     def load(data) -> 'DictionaryKey':
@@ -1116,7 +1121,8 @@ class DictionaryLemma:
                  translation_metadata: 'TranslationMetadata',
                  definition: 'str',
                  html_data: Optional[str],
-                 index: int):
+                 index: int,
+                 html_is_encoded: bool = False):
         # inflection stuff
         self.part_of_speech = part_of_speech
         self.dictionary_keys = dictionary_keys
@@ -1128,6 +1134,7 @@ class DictionaryLemma:
         # payload
         self.definition: str = definition
         self.html_data = html_data
+        self.html_is_encoded = html_is_encoded
 
         # formating
         self.index = index
@@ -1441,7 +1448,7 @@ class TackonEntry:
         # TACKON pte
         # ADJ 1 0 POS
         # TACKON ! (emphatic particle w/personal ADJ); (usually with ABL, suapte);
-        m = re.fullmatch(r"TACKON (\S*)\s*", l1)
+        m = re.match(r"TACKON (\S*)\s*", l1)
         assert m is not None
         self.tackon = m.group(1)
 
@@ -1531,7 +1538,7 @@ class UniqueEntry:
         self.l2 = l2
         self.l3 = l3
 
-class Lexicon(metaclass=ABCMeta):
+class Lexicon(ABC):
     def __init__(self, path):
         self.inflection_list: List[InflectionRule] = []
         self._dictionary_keys: List[DictionaryKey] = []
@@ -1637,7 +1644,7 @@ class Lexicon(metaclass=ABCMeta):
         return l[0] if len(l) > 0 else None
 
 
-class NormalLexicon(Lexicon, metaclass=ABCMeta):
+class NormalLexicon(Lexicon):
     def __init__(self, path):
         Lexicon.__init__(self, path)
 
@@ -1670,8 +1677,9 @@ class NormalLexicon(Lexicon, metaclass=ABCMeta):
         self.map_ending_infls[ending].append(rule)
 
     def load_inflections(self, path):
+        # print("PATH", path, os.path.join(path, "DataFiles/INFLECTS.txt"))
         index = 0  # this might be useful to a formater by specifying the order that the entries are in the dictionary
-        with open(path + "/DataFiles/INFLECTS.txt", encoding="ISO-8859-1") as ifile:
+        with open(os.path.join(path, "DataFiles/INFLECTS.txt"), encoding="ISO-8859-1") as ifile:
             for line in ifile:
                 line = line.strip().split("--")[0].strip()
                 if line.strip() == "":
@@ -1730,7 +1738,7 @@ class NormalLexicon(Lexicon, metaclass=ABCMeta):
         self.prefix_list.append(None)
         self.suffix_list.append(None)
         self.tackon_list.append(None)
-        with open(path + "DataFiles/ADDONS.txt", encoding="ISO-8859-1") as ifile:
+        with open(os.path.join(path, "DataFiles/ADDONS.txt"), encoding="ISO-8859-1") as ifile:
             lines = [line[:-1].split("--")[0] for line in ifile if line.split("--")[0] != ""]
         assert len(lines) % 3 == 0
         while len(lines) > 0:
@@ -1748,7 +1756,7 @@ class NormalLexicon(Lexicon, metaclass=ABCMeta):
 
 
     def load_uniques(self, path: str):
-        with open(path + "DataFiles/UNIQUES.txt", encoding="ISO-8859-1") as ifile:
+        with open(os.path.join(path, "DataFiles/UNIQUES.txt"), encoding="ISO-8859-1") as ifile:
             lines = [line[:-1].split("--")[0] for line in ifile if line.split("--")[0] != ""]
         assert len(lines) % 3 == 0
         while len(lines) > 0:
@@ -1760,15 +1768,17 @@ class NormalLexicon(Lexicon, metaclass=ABCMeta):
 
 # The hope is that this case silently replace normal Lexicons, which being faster to load and MUCH lower memory usage
 # which is good on my server. It uses the code in low_memory_stems, which is c++ code that is backed by swig
-class CppDictLexicon(NormalLexicon, metaclass=ABCMeta):
+class CppDictLexicon(NormalLexicon):
     def __init__(self, path: str, dict_file: str):
         self.dict_file = dict_file
         NormalLexicon.__init__(self, path)
 
     def load_dictionary(self, path: str):
-        import PyWhitakersWords.low_memory_stems.fast_dict_keys as fdk
+        import low_memory_stems.fast_dict_keys
+        fdk = low_memory_stems.fast_dict_keys.get_lib()
+
         self.dict_object = fdk.DictionaryStemCollection()
-        cpp_file = path + "/" + self.dict_file
+        cpp_file = os.path.join(path, self.dict_file)
         print("LOADING CPP FILE", cpp_file)
         self.dict_object.load(cpp_file)
 
@@ -1782,7 +1792,7 @@ class CppDictLexicon(NormalLexicon, metaclass=ABCMeta):
         return self.dict_object.all_lemmata
 
 
-class Formater(metaclass=ABCMeta):
+class Formater(ABC):
     def __init__(self, lex: Lexicon):
         self.lex = lex
 

@@ -1,14 +1,14 @@
-from PyWhitakersWords.entry_and_inflections import *
-# from PyWhitakersWords.whitakers_words import WW_FORMATER
-from PyWhitakersWords.searcher import get_matches, FormGroup, EntryQuery
-from typing import List, Tuple, Optional, Dict
-from abc import abstractmethod
+# - *- coding: utf- 8 - *-
 
-# PATH = "/home/henry/Desktop/latin_website/PyWhitakersWords/"
+from core_files.utils import *
+import io
+open = io.open
+from core_files.entry_and_inflections import *
+from core_files.searcher import get_matches, FormGroup, EntryQuery
+import os.path
 
-from memory_profiler import profile
+
 class JoinedLexicon(Lexicon):
-
     def load(self, path: str, headers_only=False):
         self.load_inflections(path)
         self.load_dictionary(path, headers_only)
@@ -40,7 +40,7 @@ class JoinedLexicon(Lexicon):
     # @profile
     def load_inflections(self, path: str):
         index = 0  # this might be useful to a formater by specifying the order that the entries are in the dictionary
-        with open(path + "DataFiles/INFLECTS.txt", encoding="ISO-8859-1") as ifile:
+        with open(os.path.join(path, "DataFiles/INFLECTS.txt"), encoding="ISO-8859-1") as ifile:
             for line in ifile:
                 line = line.strip().split("--")[0].strip()
                 if line.strip() == "":
@@ -50,7 +50,7 @@ class JoinedLexicon(Lexicon):
                 assert m is not None
                 part_of_speech = PartOfSpeech.from_str(m.group(1))
                 self._add_inflection_rule(part_of_speech, m, line, index)
-                index +=1
+                index += 1
                 if part_of_speech == PartOfSpeech.Pronoun:
                     # this allows us to conjugate packons as well
                     self._add_inflection_rule(PartOfSpeech.Packon, m, line, index)
@@ -95,7 +95,7 @@ class JoinedLexicon(Lexicon):
     def load_dictionary(self, path: str, headers_only=False):
         self.stem_map = {(pos, i): {} for pos in PartOfSpeech for i in [1,2,3,4]}
         import json
-        with open(path + "GeneratedFiles/" + ("JOINED_HEADERS.txt" if not headers_only else "JOINED_HEADERS.txt"), "r", encoding='utf-8') as i:
+        with open(os.path.join(path, "GeneratedFiles/JOINED.txt"), "r", encoding='utf-8') as i:
             l = json.load(i)
         print("FILE READ")
         dictionary_lemmata = [DictionaryLemma.load(d) for d in l]
@@ -111,7 +111,7 @@ class JoinedLexicon(Lexicon):
         self.prefix_list.append(None)
         self.suffix_list.append(None)
         self.tackon_list.append(None)
-        with open(path + "DataFiles/ADDONS.txt", encoding="ISO-8859-1") as ifile:
+        with open(os.path.join(path, "DataFiles/ADDONS.txt"), encoding="ISO-8859-1") as ifile:
             lines = [line[:-1].split("--")[0] for line in ifile if line.split("--")[0] != ""]
         assert len(lines) % 3 == 0
         while len(lines) > 0:
@@ -129,7 +129,7 @@ class JoinedLexicon(Lexicon):
 
     # @profile
     def load_uniques(self, path: str):
-        with open(path + "DataFiles/UNIQUES.txt", encoding="ISO-8859-1") as ifile:
+        with open(os.path.join(path, "DataFiles/UNIQUES.txt"), encoding="ISO-8859-1") as ifile:
             lines = [line[:-1].split("--")[0] for line in ifile if line.split("--")[0] != ""]
         assert len(lines) % 3 == 0
         while len(lines) > 0:
@@ -143,7 +143,7 @@ class JoinedLexiconFast(CppDictLexicon):
         CppDictLexicon.__init__(self, path, "GeneratedFiles/JOINED_CPP_FAST.txt")
 
 
-TWO_WORD_TEMP = """
+TWO_WORD_TEMP = u"""
 <div class="two_word_group">
     <div class="two_word_header">
         {header_slot}
@@ -153,7 +153,7 @@ TWO_WORD_TEMP = """
 </div>
 """
 
-TACKON_TEMP = """
+TACKON_TEMP = u"""
 <div class="tackon_group">
     <div class="row cannon_form_row">
         <div class="col-sm-12">
@@ -168,7 +168,7 @@ TACKON_TEMP = """
 
 
 
-PREFIX_TEMP = """
+PREFIX_TEMP = u"""
 <div class="prefix_group row">
     <div class="col-sm-3 cannon_form_row">
         Prefix: {prefix_str}
@@ -179,7 +179,7 @@ PREFIX_TEMP = """
 </div>
 """
 
-SUFFIX_TEMP = """
+SUFFIX_TEMP = u"""
 <div class="suffix_group row">
     <div class="col-sm-3 cannon_form_row">
         Suffix: {suffix_str}
@@ -190,7 +190,7 @@ SUFFIX_TEMP = """
 </div>
 """
 
-METADATA_TEMP = """
+METADATA_TEMP = u"""
 <div class="row metadata_row">
     <div class="col-sm-6 metadata_row_slot1">
         {metadata_slot_1}
@@ -201,7 +201,7 @@ METADATA_TEMP = """
 </div>
 """
 
-DEFINITION_ROW_TEMP = """
+DEFINITION_ROW_TEMP = u"""
 <div class="row definition_row">
     <div class="col-sm-12">
         {definition_row_slot}
@@ -209,7 +209,7 @@ DEFINITION_ROW_TEMP = """
 </div>
 """
 
-FORM_ROW_TEMP = """
+FORM_ROW_TEMP = u"""
 <div class="row form_row">
     <div class="col-sm-4">
         {form_row_word_slot}
@@ -220,7 +220,7 @@ FORM_ROW_TEMP = """
 </div>
 """
 
-CANNON_MAIN_ROW_TEMP = """
+CANNON_MAIN_ROW_TEMP = u"""
 <div class="row cannon_form_main_row">
     <div class="col-sm-10">
         {cannon_form_slot}
@@ -233,7 +233,7 @@ CANNON_MAIN_ROW_TEMP = """
     </div>
 </div>
 """
-CANNON_ALT_ROW_TEMP = """
+CANNON_ALT_ROW_TEMP = u"""
 <div class="row cannon_form_alt_row">
     <div class="col-sm-12">
         {cannon_form_slot}
@@ -241,11 +241,11 @@ CANNON_ALT_ROW_TEMP = """
 </div>
 """
 
-HTML_SPACE_TEMP = """<div class="collapse" id="collapseSpot{id_slot}"><div class="panel panel-default"><div class="panel-body">
+HTML_SPACE_TEMP = u"""<div class="collapse" id="collapseSpot{id_slot}"><div class="panel panel-default"><div class="panel-body">
     {html_slot}
 </div></div></div>"""
 
-WORD_GROUP_TEMP = """
+WORD_GROUP_TEMP = u"""
 <div class="word_group" id="{id_slot}">
     <div class="cannon_rows_group">
         {cannon_rows_space}
@@ -263,40 +263,40 @@ WORD_GROUP_TEMP = """
 </div>
 """
 
-Gender.alt_str_val = lambda gen: {
+Gender.alt_str_val = classmethod(lambda cls, gen: {
             Gender.Male: "masc",
             Gender.Female: "fem",
             Gender.Nueter: "neut",
             Gender.Common: "common",
             Gender.X: "X"
-        }[gen]
+        }[Gender(gen)])
 
-Number.alt_str_val = lambda num: {
+Number.alt_str_val = classmethod(lambda cls, num: {
         Number.Singular: "sg",
         Number.Plural: "pl",
         Number.X: "X"
-    }[num]
+    }[Number(num)])
 
-Voice.alt_str_val = lambda voice: {
+Voice.alt_str_val = classmethod(lambda cls, voice: {
         Voice.Active: "act",
         Voice.Passive: "pass",
         Voice.X: "X"
-    }[voice]
+    }[Voice(voice)])
 
-Mood.alt_str_val = lambda mood: {
+Mood.alt_str_val = classmethod(lambda cls, mood: {
         Mood.X: "X",
         Mood.Subjunctive: "subj",
         Mood.Infinative: "inf",
         Mood.Imperative: "imp",
         Mood.Indicitive: "ind"
-    }[mood]
+    }[Mood(mood)])
 
-Person.alt_str_val = lambda person: {
+Person.alt_str_val = classmethod(lambda cls, person: {
         Person.X: "X",
         Person.First: "1st",
         Person.Second: "2nd",
         Person.Third: "3rd",
-    }[person]
+    }[Person(person)])
 
 
 class FormaterBase:
@@ -1258,7 +1258,7 @@ class Formater:
                     suffix_meaning=format_group.suffix.explination
                 ) if format_group.suffix is not None else "",
                 metadata_space=METADATA_TEMP.format(
-                    metadata_slot_1=format_group.lemma.part_of_speech.name + " &nbsp; &nbsp; &nbsp; " +
+                    metadata_slot_1=PartOfSpeech.get_name(format_group.lemma.part_of_speech) + " &nbsp; &nbsp; &nbsp; " +
                                     dic_formater.get_extra_info_spot(format_group.lemma.dictionary_keys[0]),
                     metadata_slot_2=dic_formater.dic_metadata_frequency(format_group.lemma) + " &nbsp; &nbsp; &nbsp; " +
                                     dic_formater.dic_metadata_age(format_group.lemma)
@@ -1273,10 +1273,10 @@ class Formater:
         return "".join(output)
 
 GLOB_TAB = {}
-def init(path: str) -> Tuple[JoinedLexicon, Formater]:
+def init(path: str, fast: bool = True) -> Tuple[JoinedLexicon, Formater]:
     if path in GLOB_TAB:
         return GLOB_TAB[path]
-    J_LEX = JoinedLexiconFast(path)
+    J_LEX = (JoinedLexiconFast(path) if fast else JoinedLexicon(path))
     formater = Formater(J_LEX,
                         NounFormater(J_LEX),
                         PronounFormater(J_LEX),

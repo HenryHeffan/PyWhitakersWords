@@ -1,19 +1,15 @@
+# this file is run directly, so add the proper path
 import os
 import sys
+PATH = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, PATH)
 
-abs_pth = os.path.abspath(__file__)
-PATH = os.path.split(os.path.split(abs_pth)[0])[0]
-PATH_UP = os.path.split(PATH)[0]
-PATH += "/"
-PATH_UP += "/"
-sys.path.insert(0, PATH_UP)
-from PyWhitakersWords.entry_and_inflections import *
-from typing import Type
+from core_files.entry_and_inflections import *
 
-o_cpp = open(PATH + "low_memory_stems/generated.cpp", "w")
-o_h = open(PATH + "low_memory_stems/generated.h", "w")
+o_cpp = open(PATH + "/low_memory_stems/generated.cpp", "w")
+o_h = open(PATH + "/low_memory_stems/generated.h", "w")
 
-def output_enum(c: Type[StringMappedEnum]):
+def output_enum(c):
     STR_CPP="""
 /*
 enum class {class_name} {lb}
@@ -57,11 +53,16 @@ ostream& operator<<(ostream& os, const {class_name}& e);
 istream& operator>>(istream& is, {class_name}& e);
 string str_val_{class_name}({class_name} e);
 """
+    assert len(list(c)) == max([int(e) for e in c]) + 1, (c.__name__, len(list(c)), max([int(e) for e in c]) + 1)
+    assert len(set(list(c))) == len(list(c)) # so all the elements unque
+    assert min([int(e) for e in c]) == 0 # therefore the elemnts are 0 ... item_len-1
+
+    items_len = len(list(c))
     o_cpp.write(STR_CPP.format(
         class_name= c.__name__,
         items = ", ".join(["{} = {}".format(e.name, int(e)) for e in c]),
-        strs=", ".join(['"{}"'.format(c.str_val(e)) for e in c]),
-        items_len=len(list(c)),
+        strs=", ".join(['"{}"'.format(c.str_val(i)) for i in range(items_len)]),
+        items_len=items_len,
         lb="{",
         rb="}"
     ))

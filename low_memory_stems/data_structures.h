@@ -52,8 +52,8 @@ class DictionaryKey {
 public:
     StemGroup stems;
     PartOfSpeech part_of_speech;
-    DictData *data = NULL;
-    DictionaryLemma *lemma = NULL;
+    DictData *data;
+    DictionaryLemma *lemma;
 
     DictionaryKey() {
         this->stems=StemGroup();
@@ -215,8 +215,8 @@ public:
 class DictionaryStemCollection {
 public:
     unordered_map<string, vector<DictionaryKey *>> lookup_table[MAX_PartOfSpeech][4];
-    vector<DictionaryLemma *> all_lemmata = vector<DictionaryLemma *>();
-    vector<DictionaryKey *> all_keys = vector<DictionaryKey *>();
+    vector<DictionaryLemma *> all_lemmata;
+    vector<DictionaryKey *> all_keys;
 
     DictionaryStemCollection() {
         for(int i = 0; i < MAX_PartOfSpeech; i++)

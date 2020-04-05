@@ -1,0 +1,2 @@
+strip-hints
+enum34

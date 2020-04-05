@@ -1,3 +1,16 @@
+# - *- coding: utf- 8 - *-
+try: # this allow both python3 and python2 support
+    from typing import Optional, Tuple, Dict, List, Any, Type, Generator, NewType, Union
+    from abc import abstractmethod, ABC
+    StemGroup = Tuple[Optional[str], Optional[str], Optional[str], Optional[str]]
+except ImportError:
+    class ABC:
+        pass
+    def abstractmethod(func):
+        return func
+    def NewType(n, c):
+        return c
+import base64
 
 VOWEL_MAP=[('ā', 'a'), ('Ā', 'A'), ('ă', 'a'),             ('á', 'a'),
            ('ē', 'e'), ('Ē', 'E'), ('ĕ', 'e'), ("ë", "e"), ('é', 'e'),
@@ -44,11 +57,11 @@ def strip_spec_chars(s):
     return s
 
 
-def pad_to_len(s: str, l: int) -> str:
+def pad_to_len(s, l):
     return s + " " * (l - len(s))
 
 
-def clip_end(s: str, i: int):
+def clip_end(s, i):
     if i == 0:
         return s
     else:
@@ -64,9 +77,8 @@ def joined(stem, ending):
 
 # for storing and retreiveing utf-8 strings
 
-import base64
 def store_utf_str(s):
-    b64 = base64.b85encode(s.encode('utf-8'))
+    b64 = base64.b64encode(s.encode('utf-8'))
     return str(b64)[2:-1]
 def load_utf_str(s):
-    return base64.b85decode(s).decode('utf-8')
+    return base64.b64decode(s).decode('utf-8')
