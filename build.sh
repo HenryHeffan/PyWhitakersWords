@@ -44,18 +44,3 @@ mkdir low_memory_stems/python2
   )
 )
 echo "DONE"
-# (strip-hints utils.py > build/PyWhitakersWords/utils.py) &&
-# (strip-hints whitakers_words.py > build/PyWhitakersWords/whitakers_words.py) &&
-# (strip-hints entry_and_inflections.py > build/PyWhitakersWords/entry_and_inflections.py) &&
-# (strip-hints joined_formater_html.py > build/PyWhitakersWords/joined_formater_html.py) &&
-# (strip-hints searcher.py > build/PyWhitakersWords/searcher.py) &&
-# (cd build && zip -r PyWhitakersWords PyWhitakersWords) &&
-# rm *_wrap.cxx 2>/dev/null
-
-#echo "Testing..." &&
-
-#(gdb python)<<<"run -c \"import fast_dict_keys;\"
-#where"
-
-# (cd ..; gdb python3.6)<<<"run -m whitakers_words.py
-# where"

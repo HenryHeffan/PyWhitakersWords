@@ -56,3 +56,7 @@ print("LOADED WW")
 for word in ["hi", "a", "qui", "quicumque", "quibus", "praecanto", ""]:
     J_FORM.display_entry_query(get_matches(J_LEX, word))
     WW_FORM.display_entry_query(get_matches(WW_LEX, word))
+
+print(WW_FORM.display_entry_query(get_matches(WW_LEX, "qui")))
+# print(WW_FORM.display_entry_query(get_matches(WW_LEX, "quae")))
+# print(WW_FORM.display_entry_query(get_matches(WW_LEX, "quod")))

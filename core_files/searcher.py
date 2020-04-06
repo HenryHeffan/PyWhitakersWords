@@ -138,12 +138,15 @@ def group_dic_infl_pairs(matched_dic_key_infl_rule_pairs: List[Tuple[DictionaryK
                          prefix: Optional[PrefixEntry],
                          suffix: Optional[SuffixEntry],
                          tackon: Optional[TackonEntry]) -> List[FormGroup]:
+    # print("GATHERING")
     # Also gather up ('qu', None|'cu') and ('aliqu', None|'alicu') pairs
     KEYS = {'qu', 'aliqu', "cum", "cumque", "piam", "que", "dam", "lubet", "libet", "nam", "quam", "vis"}
     lemma_forms_map: Dict[str, Tuple[DictionaryLemma, List[Tuple[DictionaryKey, InflectionRule]]]] = {k: (None, []) for k in KEYS}  # gather the inflection for each dictionary entry
     for dic_key, infl_rule in matched_dic_key_infl_rule_pairs:
+        # print("KEY",dic_key.lemma.dictionary_keys[0].stems[0],dic_key.lemma.dictionary_keys[0].stems[1])
         if dic_key.lemma.dictionary_keys[0].stems[0] == 'qu' and dic_key.lemma.dictionary_keys[0].stems[1] in {None, 'cu'}\
                 and dic_key.part_of_speech == PartOfSpeech.Pronoun:
+            # print("QU")
             lemma_forms_map['qu'][1].append((dic_key, infl_rule))
         elif dic_key.lemma.dictionary_keys[0].stems[0] == 'qu' and dic_key.lemma.dictionary_keys[0].stems[1] in {None, 'cu'}\
                 and dic_key.part_of_speech == PartOfSpeech.Packon:
@@ -192,8 +195,10 @@ def group_dic_infl_pairs(matched_dic_key_infl_rule_pairs: List[Tuple[DictionaryK
                 0
             ), cut_forms, prefix, suffix, tackon))
                 # tackon if pos != PartOfSpeech.Packon else None
+            # print("ADDING GROUP")
         else:
             grouped_list.append(FormGroup(lemma, sorted(forms, key=lambda x: x[1].index), prefix, suffix, tackon))
+        # print(grouped_list)
     # print("GROUPED LIST", grouped_list)
     #
     # for dic_key, infl_rule in matched_dic_key_infl_rule_pairs:

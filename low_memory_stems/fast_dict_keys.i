@@ -90,6 +90,8 @@ PackonDictData.accepts_tackon = lambda self, tackon: tackon is not None and tack
 
 DictionaryKey.make_form = make_form
 
+StemGroup.__getitem__ = lambda self, i: self._get_elem(i) if self._get_elem(i) != "zzz" else None
+
 from core_files.utils import load_utf_str
 DictionaryLemma.html_data = property(lambda x: load_utf_str(x._stored_html_data))
 

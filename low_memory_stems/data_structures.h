@@ -40,7 +40,7 @@ public:
             this->data[i] = "zzz";
     }
 
-    string get(int i) {
+    string _get_elem(int i) {
         return this-> data[i];
     }
 };
