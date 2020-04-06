@@ -6,16 +6,32 @@ Used on my better version of Persius, http://heffan.com/henry/latin/reader/
 The program is broken into 3 parts
 
 ### High Level Summery
-[entry_and_inflections.py](entry_and_inflections.py): has classes for storing dictionary, inflection, addon, and unique entries. These compose a 'Lexicon' More on this class below.
 
-[searcher.py](searcher.py): has functions that take in a lexicon and a string and will find possible "parsings" of that input
+Most of the core code is in **core_files/**, which contains the code for parsing words, formating output, and generating intermediate combinded dictionaries. 
 
-[whitakers_words.py](whitakers_words.py): has a class which will load the whitakers words lexicon from DICTLINE, INFLECTS, ADDONS, and UNIQUES. It also includes classes which will format the result from the query in roughly the same style as the original Whitaker's Words
+[entry_and_inflections.py](core_files/entry_and_inflections.py): has classes for storing dictionary, inflection, addon, and unique entries. These compose a 'Lexicon' More on this class below.
 
-[dictionary_compiler.py](dictionary_compiler.py): This produces the compiled dictionary files. **Execute this script before running any other part of this program.** It takes [lat.ls.perseus-eng2.xml](DataFiles/lewis_and_short.xml), the Lewis and Short Dictionary, and combines in with [DICTLINE.txt](DataFiles/DICTLINE.txt), the Whitaker's Words Dictionary, to produce a file DataFiles/JOINED.txt, which is a json file.
+[searcher.py](core_files/searcher.py): has functions that take in a lexicon and a string and will find possible "parsings" of that input
 
-[joined_formater_html.py](joined_formater_html.py): this loads the JOINED.txt file and formats the results of querys in a more readable html format.
+[whitakers_words.py](core_files/whitakers_words.py): has a class which will load the whitakers words lexicon from DICTLINE, INFLECTS, ADDONS, and UNIQUES. It also includes classes which will format the result from the query in roughly the same style as the original Whitaker's Words
 
+[joined_formater_html.py](core_files/joined_formater_html.py): this loads the JOINED.txt file and formats the results of querys in a more readable html format.
+
+[utils.py](core_files/utils.py): varius string processing functions used by multiple files
+
+[dictionary_compiler.py](core_files/dictionary_compiler.py): This produces the compiled dictionary files. **Execute this script before running any other part of this program.** It takes [lewis_and_short.xml](DataFiles/lewis_and_short.xml), the Lewis and Short Dictionary, and combines in with [DICTLINE.txt](DataFiles/DICTLINE.txt), the Whitaker's Words Dictionary, to produce a file DataFiles/JOINED.txt, which is a json file.
+
+[l_and_s_parser.py](core_files/l_and_s_parser.py): This extracts the data from [lewis_and_short.xml](DataFiles/lewis_and_short.xml)
+
+**DataFiles** contains the raw dictionary files, both from Whitakers Words and the Lewis and Short dictionary.
+
+**GeneratedFiles** contains intermediate dictionaries generated from the files in *DataFiles*. In particular, these are used by the c++ dictionary-stem handler.
+
+**low_memory_stems** is a bunch of files which use c++ and swig to create use about 1/3 as much memory to store all of the entries in a dictionary. This is useful on my server. It is designed to be able to be substituted seemlessly for the pure python implementation. The c++ code is partely generated from the python code.
+
+### Other build details
+
+This library uses strip-hints (TODO ADD LINK) to remove all typehints before the code is run in python2, to allow both python 2 and python 3 support.
 
 ### Details of Parser
 This primarily consist of the files [entry_and_inflections.py](entry_and_inflections.py) and [searcher.py](searcher.py).
