@@ -21,7 +21,7 @@ VOWEL_MAP=[('ā', 'a'), ('Ā', 'A'), ('ă', 'a'),             ('á', 'a'),
            ('^', ''),
            ("œ", "oe"), ("æ", "ae")]
 
-def downgrade_vowels(s):
+def downgrade_vowels(s: str) -> str:
     for spec, r in VOWEL_MAP:
         # print(spec, r)
         s = s.replace(spec, r)
@@ -51,24 +51,24 @@ SPEC_CHARS = [
     ('—', '&mdash;'), ('i', '&itilde;'), ('.', '&cj;'), ('"', '&ldquo'), ('"', '&rdquo')
 ]
 
-def strip_spec_chars(s):
+def strip_spec_chars(s: str) -> str:
     for r, spec in SPEC_CHARS:
         s = s.replace(spec, r)
     return s
 
 
-def pad_to_len(s, l):
+def pad_to_len(s: str, l: int) -> str:
     return s + " " * (l - len(s))
 
 
-def clip_end(s, i):
+def clip_end(s: str, i: int) -> str:
     if i == 0:
         return s
     else:
         return s[:-i]
 
 
-def joined(stem, ending):
+def joined(stem: str, ending: str) -> str:
     if ending != "":
         return "{}.{}".format(stem, ending)
     else:
@@ -77,8 +77,8 @@ def joined(stem, ending):
 
 # for storing and retreiveing utf-8 strings
 
-def store_utf_str(s):
+def store_utf_str(s: str) -> str:
     b64 = base64.b64encode(s.encode('utf-8'))
     return str(b64)[2:-1]
-def load_utf_str(s):
+def load_utf_str(s: str) -> str:
     return base64.b64decode(s).decode('utf-8')

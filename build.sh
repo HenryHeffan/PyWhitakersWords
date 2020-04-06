@@ -23,8 +23,9 @@ mkdir low_memory_stems/python2
   (
     (
       echo "MAKING PYTHON 3"
+      CONFIG_PY3=$(python3.6-config --includes) &&
       swig -c++ -python -py3 fast_dict_keys.i &&
-      g++ -std=c++0x -O3 -c -fpic fast_dict_keys_wrap.cxx -I/usr/include/python3.6 &&
+      g++ -std=c++0x -O3 -c -fpic fast_dict_keys_wrap.cxx $CONFIG_PY3 &&
       g++ -std=c++0x -O3 -shared -o _fast_dict_keys.so fast_dict_keys_wrap.o data_structures.o generated.o &&
       mv _fast_dict_keys.so ../python3/_fast_dict_keys.so &&
       mv fast_dict_keys.py ../python3/fast_dict_keys.py &&
@@ -32,13 +33,13 @@ mkdir low_memory_stems/python2
     )
     (
       echo "MAKING PYTHON 2"
+      CONFIG_PY2=$(python2.7-config --includes)
       swig -c++ -python fast_dict_keys.i &&
-      g++ -std=c++0x -O3 -c -fpic fast_dict_keys_wrap.cxx -I/usr/include/python2.7 &&
+      g++ -std=c++0x -O3 -c -fpic fast_dict_keys_wrap.cxx $CONFIG_PY2 &&
       g++ -std=c++0x -O3 -shared -o _fast_dict_keys.so fast_dict_keys_wrap.o data_structures.o generated.o &&
       mv _fast_dict_keys.so ../python2/_fast_dict_keys.so &&
       mv fast_dict_keys.py ../python2/fast_dict_keys.py &&
       touch ../python2/__init__.py
-
     )
   )
 )
