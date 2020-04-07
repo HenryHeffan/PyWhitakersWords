@@ -1771,13 +1771,14 @@ class NormalLexicon(Lexicon):
 class CppDictLexicon(NormalLexicon):
     def __init__(self, path: str, dict_file: str, decode_func=None):
         self.dict_file = dict_file
-        NormalLexicon.__init__(self, path)
 
         import low_memory_stems.fast_dict_keys
         self.fdk = low_memory_stems.fast_dict_keys.get_lib()
 
         delattr(self.fdk.DictionaryLemma, "html_data")
         self.fdk.DictionaryLemma.html_data = property(decode_func)
+
+        NormalLexicon.__init__(self, path)
 
     def load_dictionary(self, path: str):
         self.dict_object = self.fdk.DictionaryStemCollection()
