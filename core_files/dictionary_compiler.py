@@ -3,7 +3,7 @@
 import os
 import sys
 
-PATH = os.path.dirname(os.path.abspath(__file__))
+PATH = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, PATH)
 
 import xml.etree.ElementTree as ET
@@ -118,7 +118,7 @@ def get_ls_ents():
                     ents.append(e)
     return ents
 
-def write_lemma_fast_cpp_format(o: IO, lemma: DictionaryLemma):
+def write_lemma_fast_cpp_format(o: IO, lemma: DictionaryLemma, only_ref_def=True):
     o.write(PartOfSpeech.str_val(lemma.part_of_speech) + " " + lemma.translation_metadata.to_str() + " "
             + str(lemma.index) + " " + str(len(lemma.dictionary_keys)))
     for key in lemma.dictionary_keys:
@@ -126,7 +126,9 @@ def write_lemma_fast_cpp_format(o: IO, lemma: DictionaryLemma):
     o.write(" ")
     o.write(lemma.definition if lemma.definition is not None else " ")
     o.write("\n")
-    o.write(store_utf_str(lemma.html_data if lemma.html_data is not None else ""))
+    print(hasattr(lemma, "ent_id"), lemma.ent_id if hasattr(lemma, "ent_id") else "NO")
+    o.write((lemma.ent_id if hasattr(lemma, "ent_id") else " ") if only_ref_def else
+            store_utf_str(lemma.html_data if lemma.html_data is not None else ""))
     o.write("\n")
 
 def generate_html_dic():
@@ -171,19 +173,29 @@ for key in WW_LEXICON.dictionary_keys:
     if k in ENT_DIC:
         # assert key.html_data is None, (k, key.html_data)
         key.html_data = [ent.extract_html() for ent in ENT_DIC[k]]
+        key.ent_id = [ent.id for ent in ENT_DIC[k]]
         del ENT_DIC[k]
     elif k2 in ENT_DIC:
         # assert key.html_data is None, (k2, key.lemma.html_data)
         key.html_data = [ent.extract_html() for ent in ENT_DIC[k2]]
+        key.ent_id = [ent.id for ent in ENT_DIC[k2]]
         del ENT_DIC[k2]
 
 for lemma in WW_LEXICON.dictionary_lemmata:
     htmls = []
+    ids = []
     for key in lemma.dictionary_keys:
         for html in key.html_data:
             if html not in htmls:
                 htmls.append(html)
+        for ent_id in (key.ent_id if hasattr(key, "ent_id") else []):
+            if ent_id not in ids:
+                # print(ent_id)
+                ids.append(ent_id)
+    # print(ids)
     lemma.html_data = "\n".join(htmls)
+    lemma.ent_id = " ".join(ids)
+    # print(lemma.ent_id)
     ND.add(lemma)
 
 # Now add all the enmatched pairs. But only do this if it is NOT of type X, because those cant be conjugated
@@ -212,8 +224,19 @@ with open(os.path.join(PATH, "GeneratedFiles/JOINED_CPP_FAST.txt"), "w") as o:
     for lemma in ND:
         if lemma.part_of_speech != PartOfSpeech.X:
             write_lemma_fast_cpp_format(o, lemma)
+with open(os.path.join(PATH, "GeneratedFiles/JOINED_CPP_FAST_ONLY_REF_DEF.txt"), "w") as o:
+    for lemma in ND:
+        if lemma.part_of_speech != PartOfSpeech.X:
+            # print("REF DEF")
+            write_lemma_fast_cpp_format(o, lemma, only_ref_def=True)
 
-import whitakers_words
+
+with open(os.path.join(PATH, "GeneratedFiles/REF_DEF_TABLE.txt"), "w") as o:
+    for ent in ls_ents:
+        o.write(ent.id + " " + store_utf_str("".join(ent.extract_html())))  # write_lemma_fast_cpp_format(o, lemma, only_ref_def=True)
+        o.write("\n")
+
+from core_files import whitakers_words
 ww, _ = whitakers_words.init(PATH, no_cache=True, fast=False)
 for i, n in enumerate(ww.dictionary_lemmata):
     n.rebuild(i)

@@ -139,8 +139,8 @@ class JoinedLexicon(Lexicon):
             u = UniqueEntry(l1, l2, l3)
             self.uniques[u.word] = u
 class JoinedLexiconFast(CppDictLexicon):
-    def __init__(self, path):
-        CppDictLexicon.__init__(self, path, "GeneratedFiles/JOINED_CPP_FAST.txt")
+    def __init__(self, path, decode_func):
+        CppDictLexicon.__init__(self, path, "GeneratedFiles/JOINED_CPP_FAST.txt" if decode_func is None else "GeneratedFiles/JOINED_CPP_FAST_ONLY_REF_DEF.txt", decode_func)
 
 
 TWO_WORD_TEMP = u"""
@@ -1273,10 +1273,10 @@ class Formater:
         return "".join(output)
 
 GLOB_TAB = {}
-def init(path: str, fast: bool = True) -> Tuple[JoinedLexicon, Formater]:
+def init(path: str, fast: bool = True, decode_func=None) -> Tuple[JoinedLexicon, Formater]:
     if path in GLOB_TAB:
         return GLOB_TAB[path]
-    J_LEX = (JoinedLexiconFast(path) if fast else JoinedLexicon(path))
+    J_LEX = (JoinedLexiconFast(path, decode_func) if fast else JoinedLexicon(path))
     formater = Formater(J_LEX,
                         NounFormater(J_LEX),
                         PronounFormater(J_LEX),

@@ -1769,14 +1769,17 @@ class NormalLexicon(Lexicon):
 # The hope is that this case silently replace normal Lexicons, which being faster to load and MUCH lower memory usage
 # which is good on my server. It uses the code in low_memory_stems, which is c++ code that is backed by swig
 class CppDictLexicon(NormalLexicon):
-    def __init__(self, path: str, dict_file: str):
+    def __init__(self, path: str, dict_file: str, decode_func):
         self.dict_file = dict_file
         NormalLexicon.__init__(self, path)
 
-    def load_dictionary(self, path: str):
         import low_memory_stems.fast_dict_keys
-        fdk = low_memory_stems.fast_dict_keys.get_lib()
+        self.fdk = low_memory_stems.fast_dict_keys.get_lib()
 
+        delattr(self.fdk.DictionaryLemma, "html_data")
+        self.fdk.DictionaryLemma.html_data = property(decode_func)
+
+    def load_dictionary(self, path: str):
         self.dict_object = fdk.DictionaryStemCollection()
         cpp_file = os.path.join(path, self.dict_file)
         print("LOADING CPP FILE", cpp_file)
