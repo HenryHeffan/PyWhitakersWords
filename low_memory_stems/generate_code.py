@@ -322,8 +322,9 @@ def add_baked_dictionary(d, name):
                 "_LEMMATA[" + str(len(LEMMATA)) + "];\n")
     # for i in range(len(LEMMATA) // 1000):
     #     sl_l, sl_r = i*1000, min((i+1)*1000, len(LEMMATA))
-    b_cpp_lemmas.write("const DictionaryLemma "+name.upper()+
-                "_LEMMATA[" + str(len(LEMMATA)) + "] = {" + (",\n".join(LEMMATA)) + "};\n")
+    print(name.upper())
+    print("const DictionaryLemma ",name.upper(), "_LEMMATA[", str(len(LEMMATA)), "] = {", (",\n".join(LEMMATA)), "};\n")
+    b_cpp_lemmas.write("const DictionaryLemma "+name.upper() + "_LEMMATA[" + str(len(LEMMATA)) + "] = {" + (",\n".join(LEMMATA)) + "};\n")
 
     b_h.write("const extern DictionaryKey "+name.upper()+
                 "_KEYS[" + str(len(TRUE_KEYS)) + "];\n")
