@@ -31,7 +31,7 @@ mkdir -p low_memory_stems/python2
   (
   if $SHOULD_BAKE
   then
-    rm build/baked.h build/baked_*.cpp build/baked_*.o
+    rm -f build/baked.h build/baked_*.cpp build/baked_*.o
   fi
   ) &&
   echo "GENERATING CODE" &&
