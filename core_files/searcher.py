@@ -278,6 +278,9 @@ def get_inner_matches(lex: Lexicon,
                     if entry.part_of_speech == PartOfSpeech.Packon and not entry.packon_data.accepts_tackon(tackon):
                         continue  # we cant have a PACKON without a TACKON
                     if suffix is None:
+                        # print(entry.__class__)
+                        # print(list(entry.__class__.__dict__))
+                        # print(entry.pos_data)
                         if infl.pos_data.matches(entry.pos_data):
                             matched_dic_infl_pairs.append((entry, infl))
                     elif suffix.accepts_stem_dic_key(entry):

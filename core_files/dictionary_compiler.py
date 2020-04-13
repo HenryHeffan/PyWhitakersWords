@@ -224,12 +224,15 @@ with open(os.path.join(PATH, "GeneratedFiles/JOINED_CPP_FAST.txt"), "w") as o:
     for lemma in ND:
         if lemma.part_of_speech != PartOfSpeech.X:
             write_lemma_fast_cpp_format(o, lemma)
+
 with open(os.path.join(PATH, "GeneratedFiles/JOINED_CPP_FAST_ONLY_REF_DEF.txt"), "w") as o:
     for lemma in ND:
         if lemma.part_of_speech != PartOfSpeech.X:
             # print("REF DEF")
             write_lemma_fast_cpp_format(o, lemma, only_ref_def=True)
 
+with open(os.path.join(PATH, "GeneratedFiles/JOINED_ONLY_REF_DEF.txt"), "w", encoding='utf-8') as o:
+    json.dump([n.store(only_ref_def=True) for n in ND], o, indent=1)
 
 with open(os.path.join(PATH, "GeneratedFiles/REF_DEF_TABLE.txt"), "w") as o:
     for ent in ls_ents:

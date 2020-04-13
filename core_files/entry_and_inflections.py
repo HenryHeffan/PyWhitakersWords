@@ -1142,13 +1142,13 @@ class DictionaryLemma:
     # def get_main_key(self) -> 'DictionaryKey':
     #     return self.dictionary_keys[0]
 
-    def store(self, header=False) -> Dict:
+    def store(self, header=False, only_ref_def=False) -> Dict:
         return {
             'pos': PartOfSpeech.str_val(self.part_of_speech),
             'keys': [key.store() for key in self.dictionary_keys],
             'metadata': self.translation_metadata.to_str(),
             'def': self.definition if not header else "",
-            'html': self.html_data if not header else "",
+            'html': (self.html_data if not header else "") if not only_ref_def else (self.ent_id if hasattr(self, "ent_id") else " "),
             'index': self.index
         }
 
@@ -1541,6 +1541,7 @@ class UniqueEntry:
 class Lexicon(ABC):
     def __init__(self, path):
         self.inflection_list: List[InflectionRule] = []
+        self.inflection_pos_map: Dict[PartOfSpeech, List[InflectionRule]] = {pos: [] for pos in PartOfSpeech}
         self._dictionary_keys: List[DictionaryKey] = []
         self._dictionary_lemmata: List[DictionaryLemma] = []
         self.prefix_list: List[Optional[PrefixEntry]] = []
@@ -1566,7 +1567,7 @@ class Lexicon(ABC):
         pass
 
     def get_noun_inflection_rule(self, declention: DeclentionType, declention_varient: DeclentionSubtype, gender: Gender, case: Case, number: Number) -> Optional[InflectionRule]:
-        l = [infl for infl in self.inflection_list if
+        l = [infl for infl in self.inflection_pos_map[PartOfSpeech.Noun] if
              infl.part_of_speech == PartOfSpeech.Noun and
              declention_type_matches(infl.noun_data.declention, declention) and
              declention_subtype_matches(infl.noun_data.declention_variant, declention_varient) and
@@ -1577,7 +1578,7 @@ class Lexicon(ABC):
         return l[0] if len(l) > 0 else None
 
     def get_number_inflection_rule(self, declention: DeclentionType, declention_varient: DeclentionSubtype, gender: Gender, case: Case, number: Number, number_kind: NumberKind) -> Optional[InflectionRule]:
-        l = [infl for infl in self.inflection_list if
+        l = [infl for infl in self.inflection_pos_map[PartOfSpeech.Number] if
              infl.part_of_speech == PartOfSpeech.Number and
              declention_type_matches(infl.number_data.declention, declention) and
              declention_subtype_matches(infl.number_data.declention_variant, declention_varient) and
@@ -1589,7 +1590,7 @@ class Lexicon(ABC):
         return l[0] if len(l) > 0 else None
 
     def get_pronoun_inflection_rule(self, declention: DeclentionType, declention_varient: DeclentionSubtype, gender: Gender, case: Case, number: Number) -> Optional[InflectionRule]:
-        l = [infl for infl in self.inflection_list if
+        l = [infl for infl in self.inflection_pos_map[PartOfSpeech.Pronoun] if
              infl.part_of_speech == PartOfSpeech.Pronoun and
              declention_type_matches(infl.pronoun_data.declention, declention) and
              declention_subtype_matches(infl.pronoun_data.declention_variant, declention_varient) and
@@ -1600,7 +1601,7 @@ class Lexicon(ABC):
 
 
     def get_adjective_inflection_rule(self, declention: DeclentionType, declention_varient: DeclentionSubtype, gender: Gender, case: Case, number: Number, adjective_kind: AdjectiveKind) -> Optional[InflectionRule]:
-        l = [infl for infl in self.inflection_list if
+        l = [infl for infl in self.inflection_pos_map[PartOfSpeech.Adjective] if
              infl.part_of_speech == PartOfSpeech.Adjective and
              declention_type_matches(infl.adjective_data.declention, declention) and
              declention_subtype_matches(infl.adjective_data.declention_variant, declention_varient) and
@@ -1612,7 +1613,7 @@ class Lexicon(ABC):
         return l[0] if len(l) > 0 else None
 
     def get_verb_inflection_rule(self, conjugation: ConjugationType, conjugation_variant: ConjugationSubtype, number: Number, person: Person, voice: Voice, tense: Tense, mood: Mood) -> Optional[InflectionRule]:
-        l = sorted([infl for infl in self.inflection_list if
+        l = sorted([infl for infl in self.inflection_pos_map[PartOfSpeech.Verb] if
              infl.part_of_speech == PartOfSpeech.Verb and
              conjugation_type_matches(infl.verb_data.conjugation, conjugation) and
              conjugation_subtype_matches(infl.verb_data.conjugation_variant, conjugation_variant) and
@@ -1626,7 +1627,7 @@ class Lexicon(ABC):
         return l[0] if len(l) > 0 else None
 
     def get_participle_inflection_rule(self, conjugation: ConjugationType, conjugation_variant: ConjugationSubtype, number: Number, case: Case, voice: Voice, tense: Tense) -> Optional[InflectionRule]:
-        l = [infl for infl in self.inflection_list if
+        l = [infl for infl in self.inflection_pos_map[PartOfSpeech.Participle] if
              infl.part_of_speech == PartOfSpeech.Participle and
              conjugation_type_matches(infl.participle_entry.conjugation, conjugation) and
              conjugation_subtype_matches(infl.participle_entry.conjugation_variant, conjugation_variant) and
@@ -1637,7 +1638,7 @@ class Lexicon(ABC):
         return l[0] if len(l) > 0 else None
 
     def get_adverb_inflection_rule(self, adjective_kind_key: AdjectiveKind, adjective_kind_output: AdjectiveKind) -> Optional[InflectionRule]:
-        l = [infl for infl in self.inflection_list if
+        l = [infl for infl in self.inflection_pos_map[PartOfSpeech.Adverb] if
              infl.part_of_speech == PartOfSpeech.Adverb and
              infl.adverb_data.adjective_kind_key == adjective_kind_key and
              infl.adverb_data.adjective_kind_output == adjective_kind_output]
@@ -1649,9 +1650,13 @@ class NormalLexicon(Lexicon):
         Lexicon.__init__(self, path)
 
     def load(self, path: str):
+        print("LOADING INFL")
         self.load_inflections(path)
+        print("LOADING DICT")
         self.load_dictionary(path)
+        print("LOADING ADDONS")
         self.load_addons(path)
+        print("LOADING UNIQUES")
         self.load_uniques(path)
 
     def _add_inflection_rule(self, pos: PartOfSpeech, m, line, index):
@@ -1674,6 +1679,7 @@ class NormalLexicon(Lexicon):
                                 index)
 
         self.inflection_list.append(rule)
+        self.inflection_pos_map[rule.part_of_speech].append(rule)
         self.map_ending_infls[ending].append(rule)
 
     def load_inflections(self, path):
@@ -1768,26 +1774,34 @@ class NormalLexicon(Lexicon):
 
 # The hope is that this case silently replace normal Lexicons, which being faster to load and MUCH lower memory usage
 # which is good on my server. It uses the code in low_memory_stems, which is c++ code that is backed by swig
-class CppDictLexicon(NormalLexicon):
-    def __init__(self, path: str, dict_file: str, decode_func=None):
-        self.dict_file = dict_file
+class BakedLexicon(NormalLexicon):
+    def __init__(self, path: str, dict_cpp_name: str, decode_func):
+        self.dict_cpp_name = dict_cpp_name
 
         import low_memory_stems.fast_dict_keys
+        print("GETTING LIB")
         self.fdk = low_memory_stems.fast_dict_keys.get_lib()
 
-        delattr(self.fdk.DictionaryLemma, "html_data")
-        self.fdk.DictionaryLemma.html_data = property(decode_func)
-
+        # delattr(self.fdk.DictionaryLemma, "html_data")
+        # lambda x: load_utf_str(x._stored_html_data)
+        self.fdk.set_extract_html_data_func(decode_func)
+        # self.fdk.DictionaryLemma = TMP
+        # print("HAS ATTR html_data", hasattr(self.fdk.DictionaryLemma, "html_data"), self.fdk.DictionaryLemma().__class__)
         NormalLexicon.__init__(self, path)
+        # print("STILL HAS ATTR html_data", hasattr(self.dict_object.all_lemmata[0], "html_data"))
+        # print("SAME CLASS", self.fdk.DictionaryLemma == self.dict_object.all_lemmata[0].__class__)
 
     def load_dictionary(self, path: str):
-        self.dict_object = self.fdk.DictionaryStemCollection()
-        cpp_file = os.path.join(path, self.dict_file)
-        print("LOADING CPP FILE", cpp_file)
-        self.dict_object.load(cpp_file)
+        # if self.dict_cls is None:
+        self.dict_object = getattr(self.fdk, self.dict_cpp_name)  # DictionaryStemCollection()
+        # else:
+        #     self.dict_object = getattr(self.fdk, self.dict_cls)()
+        # cpp_file = os.path.join(path, self.dict_file)
+        # print("LOADING CPP FILE", cpp_file)
+        # self.dict_object.load(cpp_file)
 
     def get_stem_map(self, pos: PartOfSpeech, stem_key: int) -> Dict[str, List[DictionaryKey]]:
-        return self.dict_object.get_stem_dict_view_for(int(pos), stem_key)
+        return self.dict_object.get_hashtable_for(int(pos), stem_key)
     @property
     def dictionary_keys(self)-> List[DictionaryKey]:
         return self.dict_object.all_keys

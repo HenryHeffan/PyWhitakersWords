@@ -40,23 +40,33 @@
 #                         only_assigns_and_defs=False, py3_also=False)
 
 # from . import PATH
-# def run():
-from core_files.searcher import get_matches
+from memory_profiler import profile
+# @profile
+def run():
+    from core_files.searcher import get_matches
 
-import core_files.whitakers_words as ww
-import core_files.joined_formater_html as jd
-PATH="/home/henry/Desktop/PyWhitakersWords/"
+    PATH="/home/henry/Desktop/PyWhitakersWords/"
+    print("LOADING", PATH)
+    import core_files.whitakers_words as ww
+    import core_files.joined_formater_html as jd
 
-print("LOADING", PATH)
-J_LEX, J_FORM = jd.init(PATH)
-print("LOADED JOINED")
-WW_LEX, WW_FORM = ww.init(PATH)
-print("LOADED WW")
+    J_LEX, J_FORM = jd.init(PATH)
 
-for word in ["hi", "a", "qui", "quicumque", "quibus", "praecanto", ""]:
-    J_FORM.display_entry_query(get_matches(J_LEX, word))
-    WW_FORM.display_entry_query(get_matches(WW_LEX, word))
+    print("LOADED JOINED")
+    WW_LEX, WW_FORM = ww.init(PATH)
+    print("LOADED WW")
 
-print(WW_FORM.display_entry_query(get_matches(WW_LEX, "qui")))
+    for word in ["hi", "a", "qui", "quicumque", "quibus", "praecanto", ""]:
+        J_FORM.display_entry_query(get_matches(J_LEX, word))
+        WW_FORM.display_entry_query(get_matches(WW_LEX, word))
+
+    print(WW_FORM.display_entry_query(get_matches(WW_LEX, "qui")))
+
+
+run()
+
 # print(WW_FORM.display_entry_query(get_matches(WW_LEX, "quae")))
 # print(WW_FORM.display_entry_query(get_matches(WW_LEX, "quod")))
+
+
+#

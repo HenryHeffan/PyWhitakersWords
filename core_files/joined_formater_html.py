@@ -9,9 +9,13 @@ import os.path
 
 
 class JoinedLexicon(Lexicon):
-    def load(self, path: str, headers_only=False):
+    def __init__(self, path: str, ref_def=False):
+        self.ref_def = ref_def
+        Lexicon.__init__(self, path)
+
+    def load(self, path: str):
         self.load_inflections(path)
-        self.load_dictionary(path, headers_only)
+        self.load_dictionary(path)
         self.load_addons(path)
         self.load_uniques(path)
 
@@ -87,17 +91,19 @@ class JoinedLexicon(Lexicon):
                 if stem_base is None:
                     continue
                 for stem in alternate_forms_of_stem(stem_base):
-                    if not stem in self.stem_map[(lemma.part_of_speech, i)]:
-                        self.stem_map[(lemma.part_of_speech, i)][stem] = []
-                    self.stem_map[(lemma.part_of_speech, i)][stem].append(key)
+                    if not stem in self._stem_map[(lemma.part_of_speech, i)]:
+                        self._stem_map[(lemma.part_of_speech, i)][stem] = []
+                    self._stem_map[(lemma.part_of_speech, i)][stem].append(key)
 
     # @profile
-    def load_dictionary(self, path: str, headers_only=False):
-        self.stem_map = {(pos, i): {} for pos in PartOfSpeech for i in [1,2,3,4]}
+    def load_dictionary(self, path: str):
+        self._stem_map = {(pos, i): {} for pos in PartOfSpeech for i in [1,2,3,4]}
         import json
-        with open(os.path.join(path, "GeneratedFiles/JOINED.txt"), "r", encoding='utf-8') as i:
+        FILENAME = "GeneratedFiles/JOINED.txt" if not self.ref_def else "GeneratedFiles/JOINED_ONLY_REF_DEF.txt"
+        with open(os.path.join(path, FILENAME ), "r", encoding='utf-8') as i:
             l = json.load(i)
         print("FILE READ")
+        print(len(l))
         dictionary_lemmata = [DictionaryLemma.load(d) for d in l]
         del l
         print("LEMATA DECODED")
@@ -138,9 +144,10 @@ class JoinedLexicon(Lexicon):
             kind = l1[:6]
             u = UniqueEntry(l1, l2, l3)
             self.uniques[u.word] = u
-class JoinedLexiconFast(CppDictLexicon):
+
+class JoinedLexiconFast(BakedLexicon):
     def __init__(self, path, decode_func):
-        CppDictLexicon.__init__(self, path, "GeneratedFiles/JOINED_CPP_FAST.txt" if decode_func is None else "GeneratedFiles/JOINED_CPP_FAST_ONLY_REF_DEF.txt", decode_func)
+        BakedLexicon.__init__(self, path, "BAKED_JOINED", decode_func)
 
 
 TWO_WORD_TEMP = u"""
@@ -1223,7 +1230,7 @@ class Formater:
                 dic_formater = self.map[format_group.suffix.stem_pos]
                 inflectable_dic = format_group.suffix.make_fake_dic_key(format_group.lemma.dictionary_keys[0])
 
-
+            # print(hasattr(format_group.lemma, "html_data"), format_group.lemma.__class__)
             cannon_form_rows = [CANNON_MAIN_ROW_TEMP.format(
                 cannon_form_slot=dic_formater.make_cannon_form_str(format_group.lemma.dictionary_keys[0]),
                 cannon_form_suffix=(" +" + format_group.tackon.tackon) if format_group.tackon is not None else "",
@@ -1276,7 +1283,10 @@ GLOB_TAB = {}
 def init(path: str, fast: bool = True, decode_func=None) -> Tuple[JoinedLexicon, Formater]:
     if path in GLOB_TAB:
         return GLOB_TAB[path]
-    J_LEX = (JoinedLexiconFast(path, decode_func) if fast else JoinedLexicon(path))
+    if decode_func is None:
+        decode_func = lambda s: s
+    J_LEX = (JoinedLexiconFast(path, decode_func) if fast else JoinedLexicon(path, ref_def=True))
+    print("DONE MADE LEX, INITING FORMATER")
     formater = Formater(J_LEX,
                         NounFormater(J_LEX),
                         PronounFormater(J_LEX),
@@ -1288,6 +1298,7 @@ def init(path: str, fast: bool = True, decode_func=None) -> Tuple[JoinedLexicon,
                         InterjectionFormater(J_LEX),
                         NumberFormater(J_LEX),
                         PackonFormater(J_LEX))
+    print("INITED FOMRATER")
     GLOB_TAB[path] = (J_LEX, formater)
     return J_LEX, formater
 

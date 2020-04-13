@@ -1,255 +1,228 @@
+
 #include "data_structures.h"
-#include <algorithm>
-#include <cctype>
-#include <string>
+#include "assert.h"
+
+//#define DO_ASSERTS
+
 using namespace std;
 
-ostream& operator<<(ostream& os, const StemGroup& e)
-{
-    for(int i = 0; i < 4; i++)
-    {
-        os << (e.data[i]=="" ? "xxxxx" : "") << ' ';// == NULL ? "NULL": e.data[i]) ;
-    }
-    return os;
+TranslationMetadata::TranslationMetadata(const char *s) {
+    // s is of length 5
+    this->age = static_cast<DictionaryAge>(s[0] - '0'); // TODO
+    this->area = s[1];
+    this->geo = s[2];
+    this->frequency = static_cast<DictionaryFrequency>(s[3] - '0'); // TODO
+    this->source = s[4];
 }
-istream& operator>>(istream& is, StemGroup& e) {
-    for(int i = 0; i < 4; i++)
-    {
-        is >> e.data[i];
-        if(e.data[i] == "xxxxx")
-        {
-            e.data[i] = "";
+
+const string StemGroup::_get_elem(int i) const
+{
+    return string(this->cstrs[i]);
+}
+
+DictionaryKey::DictionaryKey(const char *s1, const char *s2, const char *s3, const char *s4, const PartOfSpeech part_of_speech,
+              const DictData *data, const DictionaryLemma *lemma):
+                   stems{s1, s2, s3, s4},
+                   part_of_speech(part_of_speech),
+                   data(data),
+                   lemma(lemma) {}
+
+const NounDictData *DictionaryKey::_property_noun_data() const {
+    #ifdef DO_ASSERTS
+    assert(this->part_of_speech == PartOfSpeech::Noun);
+    #endif
+    return static_cast<const NounDictData *>(this->data);
+}
+const PronounDictData *DictionaryKey::_property_pronoun_data() const {
+    #ifdef DO_ASSERTS
+    assert(this->part_of_speech == PartOfSpeech::Pronoun);
+    #endif
+    return static_cast<const PronounDictData *>(this->data);
+}
+const VerbDictData *DictionaryKey::_property_verb_data() const {
+    #ifdef DO_ASSERTS
+    assert(this->part_of_speech == PartOfSpeech::Verb);
+    #endif
+    return static_cast<const VerbDictData *>(this->data);
+}
+const AdjectiveDictData *DictionaryKey::_property_adjective_data() const {
+    #ifdef DO_ASSERTS
+    assert(this->part_of_speech == PartOfSpeech::Adjective);
+    #endif
+    return static_cast<const AdjectiveDictData *>(this->data);
+}
+const InterjectionDictData *DictionaryKey::_property_interjection_data() const {
+    #ifdef DO_ASSERTS
+    assert(this->part_of_speech == PartOfSpeech::Interjection);
+    #endif
+    return static_cast<const InterjectionDictData *>(this->data);
+}
+const PackonDictData *DictionaryKey::_property_packon_data() const {
+    #ifdef DO_ASSERTS
+    assert(this->part_of_speech == PartOfSpeech::Packon);
+    #endif
+    return static_cast<const PackonDictData *>(this->data);
+}
+const ConjunctionDictData *DictionaryKey::_property_conjunction_data() const {
+    #ifdef DO_ASSERTS
+    assert(this->part_of_speech == PartOfSpeech::Conjunction);
+    #endif
+    return static_cast<const ConjunctionDictData *>(this->data);
+}
+const AdverbDictData *DictionaryKey::_property_adverb_data() const {
+    #ifdef DO_ASSERTS
+    assert(this->part_of_speech == PartOfSpeech::Adverb);
+    #endif
+    return static_cast<const AdverbDictData *>(this->data);
+}
+const PrepositionDictData *DictionaryKey::_property_preposition_data() const {
+    #ifdef DO_ASSERTS
+    assert(this->part_of_speech == PartOfSpeech::Preposition);
+    #endif
+    return static_cast<const PrepositionDictData *>(this->data);
+}
+const NumberDictData *DictionaryKey::_property_number_data() const {
+    #ifdef DO_ASSERTS
+    assert(this->part_of_speech == PartOfSpeech::Number);
+    #endif
+    return static_cast<const NumberDictData *>(this->data);
+}
+//    InterjectionDictData *interjection_data() {
+//        assert(this->part_of_speech == PartOfSpeech::Interjection);
+//        return static_cast<InterjectionDictData *>(this->data);
+//    }
+
+DictionaryKeyView::DictionaryKeyView(
+    const DictionaryKey *keys, const unsigned int keys_ct):
+    keys(keys), keys_ct(keys_ct) {};
+
+const int DictionaryKeyView::len() const {
+    return this->keys_ct;
+}
+const DictionaryKey *DictionaryKeyView::_get_index(int index) const{
+    #ifdef DO_ASSERTS
+    assert(index >= 0 && index < this->keys_ct);
+    #endif
+    return &this->keys[index];
+}
+const DictionaryKeyView DictionaryKeyView::_get_sub_to_end_array(int start) const{
+    #ifdef DO_ASSERTS
+    assert(0 <= start && start < this->keys_ct);
+    #endif
+    return DictionaryKeyView(&this->keys[start], this->keys_ct - start);
+}
+
+
+DictionaryKeyPtrView::DictionaryKeyPtrView(const DictionaryKey **keys, const unsigned int keys_ct):
+        keys(keys), keys_ct(keys_ct) {};
+const int DictionaryKeyPtrView::len() const {
+    return this->keys_ct;
+}
+const DictionaryKey *DictionaryKeyPtrView::_get_index(int index) const {
+    #ifdef DO_ASSERTS
+    assert(index >= 0 && index < this->keys_ct);
+    #endif
+    return this->keys[index];
+}
+const DictionaryKeyPtrView DictionaryKeyPtrView::_get_sub_to_end_array(int start) const {
+    #ifdef DO_ASSERTS
+    assert(0 <= start && start < this->keys_ct);
+    #endif
+    return DictionaryKeyPtrView(&this->keys[start], this->keys_ct - start);
+}
+
+
+DictionaryLemma::DictionaryLemma(
+        PartOfSpeech part_of_speech,
+        const char *translation_metadata,
+        const char *definition, const char *html_data,
+        int index, const DictionaryKey *keys, int keys_ct):
+            part_of_speech(part_of_speech),
+            translation_metadata(translation_metadata),
+            definition(definition),
+            _stored_html_data(html_data),
+            dictionary_keys_array(keys),
+            dictionary_keys_ct(keys_ct),
+            index(index) { }
+
+    const DictionaryKeyView DictionaryLemma::_property_dictionary_keys() const {
+        return DictionaryKeyView(this->dictionary_keys_array, (unsigned int)this->dictionary_keys_ct);
+    }
+    const string DictionaryLemma::_property_definition() const {
+        return string(this->definition);
+    }
+    const string DictionaryLemma::_property_stored_html_data() const {
+        return string(this->_stored_html_data);
+    }
+    const TranslationMetadata DictionaryLemma::_property_translation_metadata() const {
+        return TranslationMetadata(this->translation_metadata);
+    }
+
+static const unsigned int hash_string(const string &str)
+{
+    unsigned int hash = 5381;
+    for(int i = 0; i < str.length(); i++)
+        hash = ((hash << 5) + hash) + str[i]; /* hash * 33 + c */
+    return hash; // this hash should always have a 0 in the first bit
+}
+
+/*
+This one will use a static table
+static const DictionaryLemma *LEMMATA;
+static const DictionaryKey *KEYS;
+static const DictionaryLemma *KEY_VECTOR_TABLE;
+static const HashTable *lookup_table[MAX_PartOfSpeech][4];
+*/
+
+HashTableCell::HashTableCell(const DictionaryKey **keys, const unsigned short ct_keys, const unsigned int hash):
+    keys(keys), ct_keys(ct_keys), hash(hash) {};
+
+const HashTableCell *HashTable::get_cell(const string &s) const {
+    unsigned int hash = hash_string(s);
+    int index = hash & ((1 << this->len_log2) - 1);
+    while(this->cells[index].ct_keys != 0) {
+        if(this->cells[index].hash == hash) {
+            if(this->cells[index].keys[0]->stems.cstrs[key_string_index] == s)
+                return &this->cells[index];
         }
-        // if(e.data[i] == "NULL") {
-        //     e.data[i] = NULL;
-        // }
+
+        index = (index + 1) & ((1 << this->len_log2) - 1);
     }
-    return is;
+    return NULL;
 }
+HashTable::HashTable(const HashTableCell *cells, const unsigned long len_log2, const int key_string_index):
+    cells(cells), len_log2(len_log2), key_string_index(key_string_index) {};
+HashTable::HashTable(): cells(NULL), len_log2(0), key_string_index(0) {};
 
-ostream& operator<<(ostream& os, const TranslationMetadata& e)
-{
-    os<<e.age<<' '<<e.area<<' '<<e.geo<<' '<<e.frequency<<' '<<e.source;
-    return os;
+bool HashTable::has(const string &s) const {
+    return this->get_cell(s) != NULL;
 }
-istream& operator>>(istream& is, TranslationMetadata& e) {
-    is>>e.age>>e.area>>e.geo>>e.frequency>>e.source;
-    return is;
-}
-
-void DictionaryKey::inflate_data() {
-    if(this->data != NULL) {
-        delete this->data;
-        this->data = NULL;
-    }
-
-    switch(this->part_of_speech) {
-        case PartOfSpeech::Verb:
-            this->data = new VerbDictData();
-            break;
-        case PartOfSpeech::Noun:
-            this->data = new NounDictData();
-            break;
-        case PartOfSpeech::Pronoun:
-            this->data = new PronounDictData();
-            break;
-        case PartOfSpeech::Adjective:
-            this->data = new AdjectiveDictData();
-            break;
-        case PartOfSpeech::Adverb:
-            this->data = new AdverbDictData();
-            break;
-        case PartOfSpeech::Conjunction:
-            this->data = new ConjunctionDictData();
-            break;
-        case PartOfSpeech::Preposition:
-            this->data = new PrepositionDictData();
-            break;
-        case PartOfSpeech::Interjection:
-            this->data = new InterjectionDictData();
-            break;
-        case PartOfSpeech::Number:
-            this->data = new NumberDictData();
-            break;
-        case PartOfSpeech::Packon:
-            this->data = new PackonDictData();
-            break;
-    }
-}
-
-ostream& operator<<(ostream& os, const DictionaryKey& e)
-{
-    os<<e.stems<<' '<<e.part_of_speech<<' '<<e.data;
-    return os;
-}
-istream& operator>>(istream& is, DictionaryKey& e) {
-    is>>e.stems>>e.part_of_speech;
-    e.inflate_data();
-
-    if(e.part_of_speech==PartOfSpeech::Verb) {
-        is>>(*static_cast<VerbDictData*>(e.data));
-    } else if(e.part_of_speech==PartOfSpeech::Noun) {
-        is>>(*static_cast<NounDictData*>(e.data));
-    } else if(e.part_of_speech==PartOfSpeech::Pronoun) {
-        is>>(*static_cast<PronounDictData*>(e.data));
-    } else if(e.part_of_speech==PartOfSpeech::Adjective) {
-        is>>(*static_cast<AdjectiveDictData*>(e.data));
-    } else if(e.part_of_speech==PartOfSpeech::Adverb) {
-        is>>(*static_cast<AdverbDictData*>(e.data));
-    } else if(e.part_of_speech==PartOfSpeech::Conjunction) {
-        is>>(*static_cast<ConjunctionDictData*>(e.data));
-    } else if(e.part_of_speech==PartOfSpeech::Preposition) {
-        is>>(*static_cast<PrepositionDictData*>(e.data));
-    } else if(e.part_of_speech==PartOfSpeech::Interjection) {
-        is>>(*static_cast<InterjectionDictData*>(e.data));
-    } else if(e.part_of_speech==PartOfSpeech::Number) {
-        is>>(*static_cast<NumberDictData*>(e.data));
-    } else if(e.part_of_speech==PartOfSpeech::Packon) {
-        is>>(*static_cast<PackonDictData*>(e.data));
-    } else {
-        cerr << "BAD PART OF SPEACH"<<endl;
+const DictionaryKeyPtrView HashTable::get(const string &s) const {
+    const HashTableCell *cell = this->get_cell(s);
+    if(cell == NULL) {
+        cerr << "CALLED GET ON NONEXISTANT STEM"<<endl;
         abort();
     }
-
-
-    /* else if(e.part_of_speech==PartOfSpeech::Participle) {
-        ParticipleDictData *n = new ParticipleDictData();
-        is>>(*n);
-        e.data = n;
-    } else if(e.part_of_speech==PartOfSpeech::Supine) {
-        SupineDictData *n = new SupineDictData();
-        is>>(*n);
-        e.data = n;
-    }*/
-    return is;
+    return DictionaryKeyPtrView(cell->keys, (unsigned int)(cell->ct_keys));
 }
 
+BakedDictionaryStemCollection::BakedDictionaryStemCollection(const HashTable (&lookup_table)[13][4], const DictionaryLemma *lemma_vec, const int lemma_ct):
+        lookup_table(lookup_table), lemma_vec(lemma_vec), lemma_ct(lemma_ct) { };
 
-/*
-this->part_of_speech=part_of_speech;
-this->translation_metadata=translation_metadata;
-this->definition=definition;
-this->index
-this->dictionary_keys = vector<DictionaryKey*>();
-
-this->definition=definition; // ensure no \n
-this->html_data=html_data; // ensure no \n
-
-*/
-ostream& operator<<(ostream& os, const DictionaryLemma& e)
+const HashTable *BakedDictionaryStemCollection::get_hashtable_for(int pos, int stem_key) const
 {
-    os<<e.part_of_speech<<' '<<e.translation_metadata<<' '<<e.index<<' '<<e.dictionary_keys.size();
-    for(int i = 0; i < e.dictionary_keys.size(); i++) {
-        os<<' '<<e.dictionary_keys[i];
+    if(stem_key < 1 || stem_key > 4)
+    {
+        cerr<<"STEM KEY MUST BE IN {1, 2, 3, 4}"<<endl;
+        abort();
     }
-    os<<' '<<e.definition<<'\n'<<e._stored_html_data<<'\n';
-    return os;
-}
-istream& operator>>(istream& is, DictionaryLemma& e)
-{
-    int len;
-    is>>e.part_of_speech>>e.translation_metadata>>e.index>>len;
-    for(int i = 0; i < len; i++) {
-        DictionaryKey *key = new DictionaryKey();
-        is>>(*key);
-        e.dictionary_keys.push_back(key);
-    }
-    getline(is, e.definition);
-    getline(is, e._stored_html_data);
-    return is;
+    return &this->lookup_table[pos][stem_key-1];
 }
 
-//string subs_in_locs(string stem, vector<int> locs, char replacement):
-//    for k in locs:
-//        stem = stem[:k] + replacement + stem[k + 1:]
-//    return stem
-
-vector<string> alternate_forms_of_stem(string stem) {
-    //cerr<<"NEW CALL "<<stem<<"\n";
-    for(int i = 0; i < stem.length(); i++)
-        stem[i] = tolower(stem[i]);
-    //cerr<<"LOWER "<<stem<<"\n";
-    vector<int> indx_j = vector<int>();
-    vector<int> indx_v = vector<int>();
-    for(int i = 0; i < stem.length(); i++) {
-        if(stem[i] == 'j')
-            indx_j.push_back(i);
-        if(stem[i] == 'v' && i!=0)
-            indx_v.push_back(i);
-    }
-    vector<string> re = vector<string>();
-    for(unsigned long mask_j = 0; mask_j < (1<<indx_j.size()); mask_j++) {
-        for(unsigned long mask_v = 0; mask_v < (1<<indx_v.size()); mask_v++) {
-            string nstr = string(stem);
-             for(int i = 0; i < indx_j.size(); i++) {
-                 if ((mask_j>>i)&1)
-                    nstr[indx_j[i]] = 'i';
-             }
-             for(int i = 0; i < indx_v.size(); i++) {
-                 if ((mask_v>>i)&1)
-                    nstr[indx_v[i]] = 'u';
-             }
-             re.push_back(nstr);
-        }
-    }
-    if (stem.size() > 0 && stem[0] == 'u') {
-        string alt_form = string(stem);
-        alt_form[0] = 'v';
-        vector<string> alt_start = alternate_forms_of_stem(alt_form);
-        for(int i = 0; i < alt_start.size(); i++)
-            re.push_back(alt_start[i]);
-    }
-    return re;
+const void BakedDictionaryStemCollection::load (const string &path) const {
+    // does nothing, but for convinience of the interfact
 }
 
-void DictionaryStemCollection::insert_lemma(DictionaryLemma *lemma, int index) {
-//def insert_lemma(self, lemma: DictionaryLemma, index: int):
-//    # function to generate alternate forms for each stem by applying i,j and u,v substitiutions, and
-//    cerr<<"INSERTING LEMMA"<<endl;
-
-    lemma->rebuild(index);
-    this->all_lemmata.push_back(lemma);
-    for(int key_index = 0; key_index < lemma->dictionary_keys.size(); key_index++) {
-        this->all_keys.push_back(lemma->dictionary_keys[key_index]);
-        for(int stem_index = 1; stem_index <= 4; stem_index ++)
-        {
-            string stem_base = lemma->dictionary_keys[key_index]->stems.data[stem_index-1];
-//        for , i in zip(key.stems, [1, 2, 3, 4]):
-            if (stem_base == "zzz")
-                continue;
-               vector<string> alt_stems = alternate_forms_of_stem(stem_base);
-            for(int i = 0; i < alt_stems.size(); i++) {
-                string stem = alt_stems[i];
-//                cerr<<"ADDING TO MAP "<<lemma->part_of_speech<<" "<<(stem_index-1)<<endl;
-                unordered_map<string, vector<DictionaryKey *>> *mp = &this->lookup_table[static_cast<int>(lemma->part_of_speech)][stem_index-1];
-                if ((*mp).find(stem) == (*mp).end()) //not stem in self.stem_map[(lemma.part_of_speach, i)]:
-                    (*mp)[stem] = vector<DictionaryKey *>();
-                (*mp)[stem].push_back(lemma->dictionary_keys[key_index]);
-            }
-        }
-
-    }
-//    for key in lemma.dictionary_keys:
-
-}
-/*
-ostream& operator<<(ostream& os, const DictionaryStemCollection& e)
-{
-    os<<e.part_of_speech<<' '<<e.translation_metadata<<' '<<e.index<<' '<<e.dictionary_keys.size();
-    for(int i = 0; i < e.dictionary_keys.size(); i++) {
-        os<<' '<<e.dictionary_keys[i];
-    }
-    os<<' '<<e.definition<<'\n'<<e.html_data<<'\n';
-    return os;
-}*/
-istream& operator>>(istream& is, DictionaryStemCollection& e)
-{
-//    cerr<<"LOADING!!!!"<<endl;
-    while(is.peek() != EOF) {
-        DictionaryLemma *lemma = new DictionaryLemma();
-        is >> (*lemma);
-        e.insert_lemma(lemma, lemma->index);
-    }
-}
-//"/home/henry/Desktop/latin_website/PyWhitakersWords/GeneratedFiles/WW.txt"
+extern const BakedDictionaryStemCollection BAKED_WW;
+extern const BakedDictionaryStemCollection BAKED_JOINED;
 

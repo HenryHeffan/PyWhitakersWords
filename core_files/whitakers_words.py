@@ -35,6 +35,8 @@ class WWLexicon(NormalLexicon):
             last_lemma: Optional[DictionaryLemma] = None
             working_lemma: Optional[DictionaryLemma] = None
             for line in ifile:
+                # if index > 100:
+                #     break
                 # strip out the raw line into its groups
                 __stems = [line[:19].strip(), line[19:2 * 19].strip(), line[2 * 19:3 * 19].strip(), line[3 * 19:4 * 19].strip()]
                 _stems = [x if x.strip() not in {"zzz", ""} else None for x in __stems]
@@ -104,9 +106,9 @@ class WWLexicon(NormalLexicon):
                                        index)
         self.insert_lemma(SUM_ESSE_FUI, index)
 
-class FastWWLexicon(CppDictLexicon):
+class FastWWLexicon(BakedLexicon):
     def __init__(self, path):
-        CppDictLexicon.__init__(self, path, "GeneratedFiles/DICTLINE_CPP_FAST.txt")
+        BakedLexicon.__init__(self, path, "BAKED_WW", lambda s: s)
 
 
 class FormaterBase:
@@ -921,7 +923,8 @@ class WWFormater(Formater):
             PartOfSpeech.Number: number,
             PartOfSpeech.Packon: packon
         }
-        for formater in self.map.values():
+        for pos, formater in self.map.items():
+            # print("SETTING UP ", pos)
             formater.setup()
 
     def parse(self, s) -> str:

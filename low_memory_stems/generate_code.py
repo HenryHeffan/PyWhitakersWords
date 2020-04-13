@@ -3,11 +3,13 @@ import os
 import sys
 PATH = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, PATH)
+OPATH = os.path.join(PATH, "low_memory_stems/build/")
 
 from core_files.entry_and_inflections import *
 
-o_cpp = open(PATH + "/low_memory_stems/generated.cpp", "w")
-o_h = open(PATH + "/low_memory_stems/generated.h", "w")
+o_cpp = open(OPATH + "generated.cpp", "w")
+o_h = open(OPATH + "generated.h", "w")
+
 
 def output_enum(c):
     STR_CPP="""
@@ -105,6 +107,7 @@ bool operator==(const {class_name}& a, const {class_name}& b)
 class {class_name}: public DictData {lb}
 public:
 {items}
+    {class_name}({arg_items}){init_items} {lb}{rb};
     friend ostream& operator<<(ostream& os, const {class_name}& dt);
     friend istream& operator>>(istream& is, {class_name}& dt);
 {rb};
@@ -118,7 +121,8 @@ bool operator==(const {class_name}& a, const {class_name}& b);
     CMPI = {}  #"declention": "(DeclentionType)", "declention_variant": "(DeclentionSubtype)", "conjugation": "(ConjugationType)", "conjugation_variant": "(ConjugationSubtype)"}
 
     remap_type = lambda x: x if x not in MP else MP[x]
-    vals = [(k, v.__name__) for k,v in c.__init__.__annotations__.items() if k!='return']
+    vals = [(k, v.__name__) for k, v in c.__init__.__annotations__.items() if k!='return']
+    c.ordered_vals = vals
     o_cpp.write(STR_CPP.format(
         class_name= c.__name__,
         items = "\n".join(["    {} {};".format(remap_type(type), name) for name, type in vals]),
@@ -131,6 +135,8 @@ bool operator==(const {class_name}& a, const {class_name}& b);
     o_h.write(STR_H.format(
         class_name=c.__name__,
         items="\n".join(["    {} {};".format(remap_type(type), name) for name, type in vals]),
+        arg_items = ",".join(["{} {}".format(remap_type(type), name) for name, type in vals]),
+        init_items = ("" if len(vals) == 0 else ":") + (",".join(["{}({})".format(name, name) for name, type in vals])),
         read_out="".join(["<<({}e.{})<<' '".format("" if name not in CMPO else CMPO[name], name) for name, _ in vals]),
         read_in="".join([">>({}e.{})".format("" if name not in CMPI else CMPI[name], name) for name, _ in vals]),
         comp_code="&&".join(["a.{name}==b.{name}".format(name=name) for name, _ in vals]),
@@ -192,3 +198,265 @@ output_dict(PackonDictData)
 o_h.write("""
 #endif
 """)
+
+o_cpp.close()
+o_h.close()
+
+
+
+
+b_h = open(OPATH + "baked.h", "w")
+
+b_h.write("""
+#ifndef SRC_BAKED_H_
+#define SRC_BAKED_H_
+
+#include <iostream>
+#include <string>
+#include "data_structures.h"
+#include "generated.h"
+using namespace std;
+
+// """)
+from time import time
+b_h.write(str(time()))
+b_h.write("\n\n")
+
+# NOW WE GENERATE THE STATIC HASH TABLES
+
+
+def add_baked_dictionary(d, name):
+    b_cpp_keys = open(OPATH + "baked_keys_{}.cpp".format(name.lower()), "w")
+    b_cpp_lemmas = open(OPATH + "baked_lemmas_{}.cpp".format(name.lower()), "w")
+
+    b_cpp_keys.write('\n#include "baked.h"\n')
+    b_cpp_lemmas.write('\n#include "baked.h"\n')
+
+    POS_DATA_MP = {pos: [] for pos in PartOfSpeech}
+    for key in d.dictionary_keys:
+        POS_DATA_MP[key.part_of_speech].append(key.pos_data)
+    for pos in POS_DATA_MP:
+        DONE = []
+        i = 0
+        for pos_data in POS_DATA_MP[pos]:
+            for elem in DONE:
+                if elem == pos_data:
+                    pos_data.array_index = elem.array_index
+                    break
+            else:
+                DONE.append(pos_data)
+                pos_data.array_index = i
+                i+=1
+        if len(DONE) == 0:
+            continue
+
+        def f_s(elem, name):
+            at = getattr(elem, name)
+            if isinstance(at, StringMappedEnum):
+                return at.__class__.__name__ + "::" + at.name
+            if isinstance(at, str):
+                return "\"{}\"".format(at)
+            return str(at)
+
+        STRS = [
+            elem.__class__.__name__ + "(" +
+            (", ".join([f_s(elem, name) for name, type in elem.__class__.ordered_vals]))
+            + ")"
+            for elem in DONE
+        ]
+        b_cpp_keys.write("const " + DONE[0].__class__.__name__ + " " + name.upper() +
+                    "_" + pos.name + "_ARRAY[" + str(len(STRS)) + "] = {" + (",\n".join(STRS)) + "};\n")
+
+
+    LEMMATA = []
+    TRUE_KEYS = []
+    i_keys = 0
+    for i_lemmata, l in enumerate(d.dictionary_lemmata):
+        vector_index = i_keys
+        for k in l.dictionary_keys:
+            TRUE_KEYS.append(
+                """{lb}"{s1}", "{s2}", "{s3}", "{s4}", PartOfSpeech::{part_of_speech}, {dict_data}, {lemma_ptr}{rb}""".format(
+                    part_of_speech=k.part_of_speech.name,
+                    s1=k.stems[0] if k.stems[0] is not None else "zzz",
+                    s2=k.stems[1] if k.stems[1] is not None else "zzz",
+                    s3=k.stems[2] if k.stems[2] is not None else "zzz",
+                    s4=k.stems[3] if k.stems[3] is not None else "zzz",
+                    dict_data="&" +  name.upper() + "_" + k.part_of_speech.name+"_ARRAY[" + str(k.pos_data.array_index) + "]",
+                    lemma_ptr="&" + name.upper()+"_LEMMATA["+str(i_lemmata)+"]",
+                    lb="{",
+                    rb="}"
+                ))
+            k.array_index = i_keys
+            i_keys+=1
+            k.true_stem = True
+        LEMMATA.append(
+        """{lb}PartOfSpeech::{part_of_speech}, {translation_metadata}, "{definition}", "{html_data}", {index}, {keys}, {keys_len}{rb}""".format(
+            part_of_speech=l.part_of_speech.name,
+            translation_metadata='"{}{}{}{}{}"'.format(
+                int(l.translation_metadata.age),
+                l.translation_metadata.area,
+                l.translation_metadata.geo,
+                int(l.translation_metadata.frequency),
+                l.translation_metadata.source),
+            definition=l.definition.replace("\"", "\\\""),
+            html_data=l.html_data if l.html_data else "",
+            index=l.index,
+            keys="&{}_KEYS[{}]".format(name.upper(), vector_index),
+            keys_len=len(l.dictionary_keys),
+            # name="LEMMA_" + str(i),
+            lb="{",
+            rb="}"
+        ))
+
+    b_h.write("const extern DictionaryLemma "+name.upper()+
+                "_LEMMATA[" + str(len(LEMMATA)) + "];\n")
+    # for i in range(len(LEMMATA) // 1000):
+    #     sl_l, sl_r = i*1000, min((i+1)*1000, len(LEMMATA))
+    b_cpp_lemmas.write("const DictionaryLemma "+name.upper()+
+                "_LEMMATA[" + str(len(LEMMATA)) + "] = {" + (",\n".join(LEMMATA)) + "};\n")
+
+    b_h.write("const extern DictionaryKey "+name.upper()+
+                "_KEYS[" + str(len(TRUE_KEYS)) + "];\n")
+    b_cpp_keys.write("const DictionaryKey "+name.upper()+
+                "_KEYS[" + str(len(TRUE_KEYS)) + "] = {" + (", \n".join(TRUE_KEYS)) + "};\n")
+
+    def hash_string(str):
+        hash = 5381
+        for c in str:
+            hash = ((hash << 5) + hash) + ord(c)  # ; /* hash * 33 + c */
+        return hash % (2 ** 32)  # // this hash should always have a 0 in the first bit
+
+    HASH_MAPS = {}
+    b_cpp_hashmaps = open(OPATH + "baked_hashmaps_{}_small.cpp".format(name.lower()), "w")
+    b_cpp_hashmaps.write('\n#include "baked.h"\n')
+    b_cpp_hashmaps.close()
+    for key_indx_var, (mp_key, mp) in enumerate(d._stem_map.items()):
+        if(len(mp) < 400):
+            b_cpp_hashmaps = open(OPATH + "baked_hashmaps_{}_small.cpp".format(name.lower()), "a")
+        else:
+            b_cpp_hashmaps = open(OPATH + "baked_hashmaps_{}_{}.cpp".format(name.lower(), key_indx_var), "w")
+            b_cpp_hashmaps.write('\n#include "baked.h"\n')
+        # if len(mp) == 0:
+        #     continue
+        from math import log2
+        size = int(2.0 + log2(len(mp) + 2))
+        HASH_LIST: List[Optional[Tuple[str, List]]] = [None for _ in range(2 ** size)]
+
+        badness = 0
+        mb = 0
+        KEY_PTR_VECTOR = []
+        vector_i = 0
+        for stem in mp:
+            # assert all(k.true_stem for k in mp[stem])
+            indx = hash_string(stem) % len(HASH_LIST)
+            lb = 0
+            while HASH_LIST[indx] is not None:
+                badness += 1
+                lb += 1
+                indx = (indx + 1) % len(HASH_LIST)
+            mb = max(mb, lb)
+            HASH_LIST[indx] = (stem, vector_i, len(mp[stem]))
+            for k in mp[stem]:
+                KEY_PTR_VECTOR.append("&" + name.upper() + "_KEYS[" + str(k.array_index) + "]")
+                vector_i += 1
+        print(pad_to_len(mp_key[0].name[:6], 6),mp_key[1], "  ", mb, "\t", badness, "\t", str(badness / len(mp) if len(mp) > 0 else badness)[:5],
+              "\t", len(HASH_LIST), len(mp) / len(HASH_LIST))
+
+        # b_h.write("const extern DictionaryKey " + name.upper() +
+        #           "_KEY_[" + str(len(TRUE_KEYS)) + "];\n")
+        VECTOR_NAME = name.upper() + "_" + mp_key[0].name + "_" + str(mp_key[1]) + "_KEY_VECTOR"
+        b_cpp_hashmaps.write("const DictionaryKey *"
+                    + VECTOR_NAME + "[" + str(len(KEY_PTR_VECTOR)) + "] = {"
+                    + (", \n".join(KEY_PTR_VECTOR)) + "};\n")
+        HASH_LIST_STRS = ["{NULL, 0, 0x80000000}" if e is None else
+                          "{lb}&{VECTOR_NAME}[{vec_indx}], {ct}, {hash}{rb}".format(
+                              vec_indx = e[1],
+                              ct = e[2],
+                              hash = hash_string(e[0]),
+                              lb = "{",
+                              VECTOR_NAME=VECTOR_NAME,
+                              rb = "}"
+                          ) for e in HASH_LIST]
+        hashmap_name = name.upper() + "_" + mp_key[0].name + "_" + str(mp_key[1]) + "_HASH_TABLE"
+        b_h.write("extern const HashTableCell " + hashmap_name + "[" + str(len(HASH_LIST_STRS)) + "];\n")
+        b_cpp_hashmaps.write("const HashTableCell " + hashmap_name + "[" + str(len(HASH_LIST_STRS)) + "] = {"
+                    + (", \n".join(HASH_LIST_STRS)) + "};\n")
+        HASH_MAPS[mp_key] = (size, hashmap_name)
+        b_cpp_hashmaps.close()
+
+    # HashTable *lookup_table[MAX_PartOfSpeech][4];
+    # HashTable(const HashTableCell *cells, const unsigned long len, const int key_string_index)
+    # HASH_MAP_STRS = [
+    # for pos in PartOfSpeech for stem_indx in [1,2,3,4]]
+
+    b_cpp_hashmaps = open(OPATH + "baked_hashmaps_{}_joined.cpp".format(name.lower()), "w")
+    b_cpp_hashmaps.write('\n#include "baked.h"\n')
+    b_h.write("const extern HashTable "+name.upper()+
+                "_HASHTABLES[MAX_PartOfSpeech][4];\n")
+    b_cpp_hashmaps.write("const HashTable "+name.upper()+
+                "_HASHTABLES[MAX_PartOfSpeech][4] = {" + (", \n    ".join([
+        "{" + (", \n        ".join([
+                "{lb}{cells_ptr}, {len_log2}, {key_indx}{rb}".format(
+                    lb="{",
+                    rb="}",
+                    cells_ptr=HASH_MAPS[(pos, stem_indx)][1],
+                    len_log2=HASH_MAPS[(pos, stem_indx)][0],
+                    key_indx=stem_indx - 1
+                ) if (pos, stem_indx) in HASH_MAPS else "{NULL, 0, 0}"
+            for stem_indx in [1, 2, 3, 4]
+        ])) + "}"
+    for pos in PartOfSpeech])) + "};\n")
+
+    b_cpp_hashmaps.write("const BakedDictionaryStemCollection BAKED_" + name.upper() + " = BakedDictionaryStemCollection({tables}, {lemmas}, {ct});\n".format(
+        tables = name.upper()+ "_HASHTABLES",
+        lemmas = name.upper()+ "_LEMMATA",
+        ct = len(LEMMATA)
+    ))
+
+
+    b_cpp_hashmaps.close()
+    b_cpp_lemmas.close()
+    b_cpp_keys.close()
+
+    # b_h.write("const extern DictionaryKey * "+name.upper()+
+    #             "_KEY_VECTORS[" + str(len(KEY_VECTOR)) + "];\n")
+    # b_cpp.write("const DictionaryKey * "+name.upper()+
+    #             "_KEY_VECTORS[" + str(len(KEY_VECTOR)) + "] = {" + (", \n".join(KEY_VECTOR)) + "};\n")
+
+
+# CUR DictionaryKey(StemGroup stems, PartOfSpeech part_of_speech, DictData *data)
+# NEW DictionaryKey(StemGroup stems, PartOfSpeech part_of_speech, DictData *data, DictionaryLemma* lemma)
+# CUR DictionaryLemma(PartOfSpeech part_of_speech, TranslationMetadata translation_metadata,
+#                     string definition, string html_data, int index)
+# NEW DictionaryLemma(PartOfSpeech part_of_speech, TranslationMetadata translation_metadata,
+#                     string definition, string html_data, int index, DictionaryKey* keys, int keys_len)
+
+from core_files.whitakers_words import init
+ww, _ = init("/home/henry/Desktop/PyWhitakersWords/", fast=False)
+add_baked_dictionary(ww, "WW")
+
+from core_files.joined_formater_html import init
+joined, _ = init("/home/henry/Desktop/PyWhitakersWords/", fast=False)
+# for e in joined.dictionary_lemmata:
+#     print(e.html_data)
+add_baked_dictionary(joined, "JOINED")
+
+# for k in ww._stem_map:
+#     ls = ww._stem_map[k]
+#     print(k, len(mp))
+
+# CPP_REF = os.path.join(PATH, "GeneratedFiles/JOINED_CPP_FAST_ONLY_REF_DEF.txt")
+# WW = os.path.join(PATH, "GeneratedFiles/DICTLINE_CPP_FAST.txt")
+# if os.path.isfile(CPP_REF):
+#     with open(CPP_REF) as ifile:
+#         s = ifile.read()
+#         o_h.write('\nstatic const string CPP_STR = "{}";\n'.format(s.replace("\n", "\\n").replace("\"", "\\\"")))
+#     with open(WW) as ifile:
+#         s = ifile.read()
+#         o_h.write('\nstatic const string WW_STR = "{}";\n'.format(s.replace("\n", "\\n").replace("\"", "\\\"")))
+
+b_h.write("""
+#endif
+""")
+b_h.close()
+# b_cpp.close()
