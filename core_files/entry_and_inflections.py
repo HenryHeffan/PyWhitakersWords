@@ -1932,7 +1932,6 @@ class OldStyle_DICTLINE_Lexicon(PythonDictLexicon):
         index = 0  # this might be useful to a formater by specifying the order that the entries are in the dictionary
 
         FILENAME = os.path.join(path, self.file_name)
-        print("OPENING", FILENAME)
         with open(FILENAME, encoding="ISO-8859-1") as ifile:
             last_lemma: Optional[DictionaryLemma] = None
             working_lemma: Optional[DictionaryLemma] = None

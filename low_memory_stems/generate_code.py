@@ -298,8 +298,6 @@ def add_baked_dictionary(d, name):
             k.array_index = i_keys
             i_keys+=1
             k.true_stem = True
-        if l.html_data is not None:
-            print(l.html_data)
         LEMMATA.append(
         """{lb}PartOfSpeech::{part_of_speech}, {translation_metadata}, "{definition}", "{html_data}", {index}, {keys}, {keys_len}{rb}""".format(
             part_of_speech=l.part_of_speech.name,
@@ -321,16 +319,7 @@ def add_baked_dictionary(d, name):
 
     b_h.write("const extern DictionaryLemma "+name.upper()+
                 "_LEMMATA[" + str(len(LEMMATA)) + "];\n")
-    # for i in range(len(LEMMATA) // 1000):
-    #     sl_l, sl_r = i*1000, min((i+1)*1000, len(LEMMATA))
-    print(name.upper())
-    print("const DictionaryLemma ")
-    print(name.upper())
-    print("_LEMMATA[")
-    print(str(len(LEMMATA)))
-    print("] = {")
-    print((",\n".join(LEMMATA)))
-    print("};\n")
+
     b_cpp_lemmas.write("const DictionaryLemma "+name.upper() + "_LEMMATA[" + str(len(LEMMATA)) + "] = {" + (",\n".join(LEMMATA)) + "};\n")
 
     b_h.write("const extern DictionaryKey "+name.upper()+
@@ -451,32 +440,13 @@ def add_baked_dictionary(d, name):
 
 from core_files.whitakers_words import init
 ww, _ = init(PATH, fast=False)
-print("INITED WW")
 add_baked_dictionary(ww, "WW")
 
 from core_files.joined_formater_html import init
 joined, _ = init(PATH, fast=False)
-print("INITED JOINED")
-# for e in joined.dictionary_lemmata:
-#     print(e.html_data)
 add_baked_dictionary(joined, "JOINED")
-
-# for k in ww._stem_map:
-#     ls = ww._stem_map[k]
-#     print(k, len(mp))
-
-# CPP_REF = os.path.join(PATH, "GeneratedFiles/JOINED_CPP_FAST_ONLY_REF_DEF.txt")
-# WW = os.path.join(PATH, "GeneratedFiles/DICTLINE_CPP_FAST.txt")
-# if os.path.isfile(CPP_REF):
-#     with open(CPP_REF) as ifile:
-#         s = ifile.read()
-#         o_h.write('\nstatic const string CPP_STR = "{}";\n'.format(s.replace("\n", "\\n").replace("\"", "\\\"")))
-#     with open(WW) as ifile:
-#         s = ifile.read()
-#         o_h.write('\nstatic const string WW_STR = "{}";\n'.format(s.replace("\n", "\\n").replace("\"", "\\\"")))
 
 b_h.write("""
 #endif
 """)
 b_h.close()
-# b_cpp.close()
