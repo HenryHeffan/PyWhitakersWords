@@ -5,110 +5,8 @@ from core_files.utils import *
 import io
 open = io.open
 from core_files.searcher import FormGroup, EntryQuery, get_matches
+from core_files import searcher
 import os.path
-
-
-class WWLexicon(NormalLexicon):
-    def load_dictionary(self, path: str):
-        def extract_stem_group(_stems: List, pos: PartOfSpeech, word_data) -> StemGroup:
-            if pos == PartOfSpeech.Adjective and word_data.adjective_kind == AdjectiveKind.Superlative:
-                _stems[3] = _stems[0]
-            elif pos == PartOfSpeech.Adjective and word_data.adjective_kind == AdjectiveKind.Compairative:
-                _stems[2] = _stems[0]
-            stems: StemGroup = _stems  # type: ignore
-            return stems
-
-
-        # here is how this works
-        # we read over DICTLINE in a loop. Each time we see a new line, one of three things happens
-        # 1) this is a second definition of some existing entry. This will be added to the end, preceded by a '\n'
-        # 2) this is actually an alternate stem for some existing word in the dictionary. this is added as such
-        #       TODO maybe the alternate forms for multiline defs have multiple lines of their own
-        # 3) this is a new lemma, and we add it as such
-
-        # Participals, Supines, and Verbs all go in the Verb bin
-        self.stem_map = {(pos, i): {} for pos in PartOfSpeech for i in [1,2,3,4]}
-
-        index = 0  # this might be useful to a formater by specifying the order that the entries are in the dictionary
-
-        with open(os.path.join(path, "DataFiles/DICTLINE.txt"), encoding="ISO-8859-1") as ifile:
-            last_lemma: Optional[DictionaryLemma] = None
-            working_lemma: Optional[DictionaryLemma] = None
-            for line in ifile:
-                # if index > 100:
-                #     break
-                # strip out the raw line into its groups
-                __stems = [line[:19].strip(), line[19:2 * 19].strip(), line[2 * 19:3 * 19].strip(), line[3 * 19:4 * 19].strip()]
-                _stems = [x if x.strip() not in {"zzz", ""} else None for x in __stems]
-
-                part_of_speech = PartOfSpeech.from_str(line[76:82].strip())
-                pos_data = POS_DICT_ENTRY_CLASS_MP[part_of_speech].from_str(line[82:100].strip())
-                translation_metadata = TranslationMetadata(line[100:109].strip())
-                definition = line[110:-1][:79].lstrip("|")
-
-                if part_of_speech == PartOfSpeech.Packon:
-                    pos_data.get_required_tack_from_def(definition)
-
-                stems = extract_stem_group(_stems, part_of_speech, pos_data)
-
-                new_key = DictionaryKey(stems, part_of_speech, pos_data)
-
-                # now figure out what to do with the stem
-                # we preserve the following.
-                # working_lemma will always only have 1 key in it at most. This is used to collect definitions
-                # last_lemma may have multiple keys. This is used to collect keys
-
-                # if working_lemma is not None and key == working_lemma.dictionary_keys[0]: # and definition == working_lemma.definition.split(''):
-                #     raise ValueError("repeated line")
-                if working_lemma is None:
-                    working_lemma = DictionaryLemma(part_of_speech, [new_key], translation_metadata, definition, None, -1)
-                    continue
-
-                if working_lemma is not None and new_key == working_lemma.dictionary_keys[0]:  # and defen != working_lemma.defen:
-                    working_lemma.definition += '\n' + definition
-                    continue
-                # else working_lemma is None or key != working_lemma.key:
-                # the we need to either merge working_lemma into last lemma or push them back
-                if last_lemma is not None and working_lemma is not None and \
-                        working_lemma.dictionary_keys[0].alternate_form_match(last_lemma.dictionary_keys[-1]) and \
-                        working_lemma.definition == last_lemma.definition:
-                    # merge them together
-                    # print("MERGING!", last_lemma.dictionary_keys[-1], working_lemma.dictionary_keys[0])
-                    last_lemma.dictionary_keys.append(working_lemma.dictionary_keys[0])
-                    working_lemma = None
-                    continue
-
-                if last_lemma is not None:  # add the last lemma
-                    index += 1
-                    self.insert_lemma(last_lemma, index)
-
-                last_lemma = working_lemma
-                # print(stems, part_of_speech, new_key.part_of_speech)
-                working_lemma = DictionaryLemma(part_of_speech, [new_key], translation_metadata, definition, None, -1)
-
-            # this is hacky, but by looking in DICTLINE I know there is no merging/multiline definitions on the last 2
-            # lemmata. Therefore we just manually add them in here
-            index+=1
-            self.insert_lemma(working_lemma, index)
-            index += 1
-            self.insert_lemma(last_lemma, index)
-        STEMS = ("s", "", "fu", "fut")
-        index += 1
-        SUM_ESSE_FUI = DictionaryLemma(PartOfSpeech.Verb,
-                                       [DictionaryKey(
-                                           STEMS,
-                                           PartOfSpeech.Verb,
-                                           VerbDictData(ConjugationType(5), ConjugationSubtype(1), VerbKind.To_Being)
-                                       )],
-                                       TranslationMetadata("X X X A X"),
-                                       "be; exist; (also used to form verb perfect passive tenses) with NOM PERF PPL",
-                                       None,
-                                       index)
-        self.insert_lemma(SUM_ESSE_FUI, index)
-
-class FastWWLexicon(BakedLexicon):
-    def __init__(self, path):
-        BakedLexicon.__init__(self, path, "BAKED_WW", lambda s: s)
 
 
 class FormaterBase:
@@ -702,7 +600,7 @@ class AdverbFormater(FormaterBase):
 
 class PrepositionFormater(FormaterBase):
     def setup(self) -> None:
-        self.inflection_rule = [infl for infl in self.lex.inflection_list if infl.part_of_speech == PartOfSpeech.Preposition][0]
+        self.inflection_rule = self.lex.get_preposition_inflection_rule()
 
     def make_cannon_form_str(self, dic: DictionaryKey) -> str:
         return dic.make_form(self.inflection_rule)
@@ -725,7 +623,7 @@ class PrepositionFormater(FormaterBase):
 
 class ConjunctionFormater(FormaterBase):
     def setup(self) -> None:
-        self.inflection_rule = [infl for infl in self.lex.inflection_list if infl.part_of_speech == PartOfSpeech.Conjunction][0]
+        self.inflection_rule = self.lex.get_conjunction_inflection_rule()
 
     def make_cannon_form_str(self, dic: DictionaryKey) -> str:
         return dic.make_form(self.inflection_rule)
@@ -744,7 +642,7 @@ class ConjunctionFormater(FormaterBase):
 
 class InterjectionFormater(FormaterBase):
     def setup(self) -> None:
-        self.inflection_rule = [infl for infl in self.lex.inflection_list if infl.part_of_speech == PartOfSpeech.Interjection][0]
+        self.inflection_rule = self.lex.get_interjection_inflection_rule()
 
     def make_cannon_form_str(self, dic: DictionaryKey) -> str:
         return dic.make_form(self.inflection_rule)
@@ -897,7 +795,7 @@ class PackonFormater(FormaterBase):
         )
 
 
-class WWFormater(Formater):
+class WWFormater(searcher.Formater):
     def __init__(self,
                  lex: Lexicon,
                  noun: NounFormater,
@@ -910,7 +808,7 @@ class WWFormater(Formater):
                  interjection: InterjectionFormater,
                  number: NumberFormater,
                  packon: PackonFormater):
-        Formater.__init__(self, lex)
+        searcher.Formater.__init__(self, lex)
         self.map = {
             PartOfSpeech.Noun: noun,
             PartOfSpeech.Pronoun: pronoun,
@@ -982,7 +880,7 @@ class WWFormater(Formater):
         formater_pos_infl = self.map[form_group.suffix.new_pos]
         formater_pos_stem = self.map[form_group.suffix.stem_pos]
         before = "\n".join([pad_to_len(formater_pos_infl.infl_entry_line(
-            form_group.suffix.make_fake_dic_entry(key),
+            form_group.suffix.make_fake_dic_key(key),
             rule,
             word), 56) + formater_pos_infl.format_infl_metadata(rule.metadata)
                             for key, rule in sorted(form_group.key_infl_pairs, key=formater_pos_infl.sort_infls_key)])
@@ -1171,14 +1069,10 @@ class WWFormater(Formater):
 
         return "".join(output)
 
-GLOB_TAB = {}
+def init(path: str, no_cache: bool=False, fast: bool = True) -> Tuple[OldStyle_DICTLINE_Lexicon, WWFormater]:
+    WW_LEXICON = (BakedLexicon("BAKED_WW") if fast else OldStyle_DICTLINE_Lexicon("DataFiles/DICTLINE.txt"))
+    WW_LEXICON.load(path)
 
-def init(path: str, no_cache: bool=False, fast: bool = True) -> Tuple[WWLexicon, WWFormater]:
-    if not no_cache and path in GLOB_TAB:
-        print("USING CACHE")
-        return GLOB_TAB[path]
-    # return
-    WW_LEXICON = (FastWWLexicon(path) if fast else WWLexicon(path))
     WW_FORMATER = WWFormater(WW_LEXICON,
                              NounFormater(WW_LEXICON),
                              PronounFormater(WW_LEXICON),
@@ -1190,7 +1084,6 @@ def init(path: str, no_cache: bool=False, fast: bool = True) -> Tuple[WWLexicon,
                              InterjectionFormater(WW_LEXICON),
                              NumberFormater(WW_LEXICON),
                              PackonFormater(WW_LEXICON))
-    GLOB_TAB[path] = WW_LEXICON, WW_FORMATER
     return WW_LEXICON, WW_FORMATER
 
 # from memory_profiler import profile

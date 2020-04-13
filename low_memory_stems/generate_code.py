@@ -7,6 +7,10 @@ OPATH = os.path.join(PATH, "low_memory_stems/build/")
 
 from core_files.entry_and_inflections import *
 
+import sys
+
+SHOULD_BAKE = (sys.argv[1] != "false") if len(sys.argv) >= 2 else False
+
 o_cpp = open(OPATH + "generated.cpp", "w")
 o_h = open(OPATH + "generated.h", "w")
 
@@ -202,7 +206,8 @@ o_h.write("""
 o_cpp.close()
 o_h.close()
 
-
+if not SHOULD_BAKE:
+    exit(0)
 
 
 b_h = open(OPATH + "baked.h", "w")

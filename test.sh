@@ -1,11 +1,6 @@
 #!/bin/bash
 #cd ..
+echo "==========================PYTHON 3=========================="
 python3.6 test.py
-echo ""
-echo ""
-echo ""
-echo "PYTHON2"
-echo ""
-echo ""
-echo ""
+echo "==========================PYTHON 2=========================="
 python2.7 test.py

@@ -17,6 +17,7 @@ TranslationMetadata::TranslationMetadata(const char *s) {
 
 const string StemGroup::_get_elem(int i) const
 {
+    //cerr<<"stem i: "<< i<<endl;
     return string(this->cstrs[i]);
 }
 

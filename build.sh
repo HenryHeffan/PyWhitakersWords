@@ -1,5 +1,19 @@
 #!/bin/bash
 
+# Default values of arguments
+SHOULD_BAKE=true
+
+# Loop through arguments and process them
+for arg in "$@"
+do
+    case $arg in
+        -s|--skip-bake)
+        SHOULD_BAKE=false
+        shift # Remove --initialize from processing
+        ;;
+    esac
+done
+
 timestamp() {
   date +"%T"
 }
@@ -7,33 +21,39 @@ timestamp() {
 # TODO Update includes path stuff
 # TODO add skip bake flag
 echo "BUILDING - DOING SETUP"
-rm -rf low_memory_stems/build
-rm -rf low_memory_stems/python3
-rm -rf low_memory_stems/python2
-mkdir low_memory_stems/build
-mkdir low_memory_stems/python3
-mkdir low_memory_stems/python2
+# rm -rf low_memory_stems/build
+# rm -rf low_memory_stems/python3
+# rm -rf low_memory_stems/python2
+mkdir -p low_memory_stems/build
+mkdir -p low_memory_stems/python3
+mkdir -p low_memory_stems/python2
 (
   cd low_memory_stems/ &&
+  (
+  if $SHOULD_BAKE
+  then
+    rm build/baked.h build/baked_*.cpp build/baked_*.o
+  fi
+  ) &&
   echo "GENERATING CODE" &&
-  python3.6 generate_code.py &&
-  #mv generated.cpp build/generated.cpp &&
-  #mv generated.h build/generated.h &&
-  #mv baked.cpp build/baked.cpp &&
-  #mv baked.h build/baked.h &&
+  python3.6 generate_code.py $SHOULD_BAKE &&
   cp data_structures.cpp build/data_structures.cpp &&
   cp data_structures.h build/data_structures.h &&
   cp fast_dict_keys.i build/fast_dict_keys.i &&
   cd build/ &&
-  echo "BAKED COMPILING" &&
-  timestamp &&
-  # g++ -std=c++0x -c -fpic generated.h data_structures.h baked.h &&
-  for FILE_NAME in baked_*.cpp
-   do
-     echo "g++ -std=c++0x -c -fpic $FILE_NAME"
-     g++ -std=c++0x -c -fpic $FILE_NAME
-  done &&
-  timestamp &&
+  (
+  if $SHOULD_BAKE
+  then
+    echo "BAKED COMPILING" &&
+    timestamp &&
+    for FILE_NAME in baked_*.cpp
+     do
+       echo "g++ -std=c++0x -c -fpic $FILE_NAME"
+       g++ -std=c++0x -c -fpic $FILE_NAME
+    done &&
+    timestamp
+  fi
+  ) &&
   echo "SHARED COMPILING" &&
   g++ -std=c++0x -O3 -c -fpic generated.cpp &&
   g++ -std=c++0x -O3 -c -fpic data_structures.cpp &&

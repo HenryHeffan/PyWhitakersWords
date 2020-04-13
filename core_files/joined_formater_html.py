@@ -4,150 +4,10 @@ from core_files.utils import *
 import io
 open = io.open
 from core_files.entry_and_inflections import *
-from core_files.searcher import get_matches, FormGroup, EntryQuery
-import os.path
+from core_files.searcher import EntryQuery
+from core_files import searcher
 
 
-class JoinedLexicon(Lexicon):
-    def __init__(self, path: str, ref_def=False):
-        self.ref_def = ref_def
-        Lexicon.__init__(self, path)
-
-    def load(self, path: str):
-        self.load_inflections(path)
-        self.load_dictionary(path)
-        self.load_addons(path)
-        self.load_uniques(path)
-
-    def _add_inflection_rule(self, pos: PartOfSpeech, m, line, index):
-        assert m is not None
-        inflection_data = POS_INFL_ENTRY_CLASS_MP[pos].from_str(m.group(2))
-        stem_key = int(m.group(3))
-        ending_len = int(m.group(4))
-        ending = m.group(5)
-
-        assert len(ending) == ending_len, (line, ending, ending_len)
-
-        if not ending in self.map_ending_infls:
-            self.map_ending_infls[ending] = []
-        entry = InflectionRule(pos,
-                                inflection_data,
-                                stem_key,
-                                ending,
-                                InflectionAge.from_str(m.group(6)),
-                                InflectionFrequency.from_str(m.group(7)),
-                                index)
-
-        self.inflection_list.append(entry)
-        self.map_ending_infls[ending].append(entry)
-
-    # @profile
-    def load_inflections(self, path: str):
-        index = 0  # this might be useful to a formater by specifying the order that the entries are in the dictionary
-        with open(os.path.join(path, "DataFiles/INFLECTS.txt"), encoding="ISO-8859-1") as ifile:
-            for line in ifile:
-                line = line.strip().split("--")[0].strip()
-                if line.strip() == "":
-                    continue
-
-                m = re.match(r"(\S*) +(.*) +(\d) (\d) (\S*) +(\S) (\S)", line)
-                assert m is not None
-                part_of_speech = PartOfSpeech.from_str(m.group(1))
-                self._add_inflection_rule(part_of_speech, m, line, index)
-                index += 1
-                if part_of_speech == PartOfSpeech.Pronoun:
-                    # this allows us to conjugate packons as well
-                    self._add_inflection_rule(PartOfSpeech.Packon, m, line, index)
-                    index +=1
-
-    def insert_lemma(self, lemma: DictionaryLemma):
-        # function to generate alternate forms for each stem by applying i,j and u,v substitiutions, and
-        def alternate_forms_of_stem(stem: str) -> Generator[str, None, None]:
-            def subs_in_locs(stem: str, locs: Tuple[int, ...], replacement: str):
-                for k in locs:
-                    stem = stem[:k] + replacement + stem[k + 1:]
-                return stem
-
-            import itertools
-            stem = stem.lower()
-            indx_j = [i for i, c in enumerate(stem) if c == 'j']
-            indx_v = [i for i, c in enumerate(stem) if c == 'v' if i > 0]
-            for locs_i in itertools.chain.from_iterable(
-                    itertools.combinations(indx_j, n) for n in range(len(indx_j) + 1)):
-                for locs_u in itertools.chain.from_iterable(
-                        itertools.combinations(indx_v, n) for n in range(len(indx_v) + 1)):
-                    s = subs_in_locs(subs_in_locs(stem, locs_i, "i"), locs_u, "u")
-                    if len(s) > 1 and s[0] in {'u', 'v'}:
-                        yield 'u' + s[1:]
-                        yield 'v' + s[1:]
-                    else:
-                        yield s
-
-        lemma.rebuild(lemma.index)  # keep the index
-        self.dictionary_lemmata.append(lemma)
-        for key in lemma.dictionary_keys:
-            self.dictionary_keys.append(key)
-            for stem_base, i in zip(key.stems, [1, 2, 3, 4]):
-                if stem_base is None:
-                    continue
-                for stem in alternate_forms_of_stem(stem_base):
-                    if not stem in self._stem_map[(lemma.part_of_speech, i)]:
-                        self._stem_map[(lemma.part_of_speech, i)][stem] = []
-                    self._stem_map[(lemma.part_of_speech, i)][stem].append(key)
-
-    # @profile
-    def load_dictionary(self, path: str):
-        self._stem_map = {(pos, i): {} for pos in PartOfSpeech for i in [1,2,3,4]}
-        import json
-        FILENAME = "GeneratedFiles/JOINED.txt" if not self.ref_def else "GeneratedFiles/JOINED_ONLY_REF_DEF.txt"
-        with open(os.path.join(path, FILENAME ), "r", encoding='utf-8') as i:
-            l = json.load(i)
-        print("FILE READ")
-        print(len(l))
-        dictionary_lemmata = [DictionaryLemma.load(d) for d in l]
-        del l
-        print("LEMATA DECODED")
-        for i, lemma in enumerate(dictionary_lemmata):
-            self.insert_lemma(lemma)
-        print("DONE")
-            # print("{}/{}".format(i, len(dictionary_lemmata)))
-
-    # @profile
-    def load_addons(self, path: str):
-        self.prefix_list.append(None)
-        self.suffix_list.append(None)
-        self.tackon_list.append(None)
-        with open(os.path.join(path, "DataFiles/ADDONS.txt"), encoding="ISO-8859-1") as ifile:
-            lines = [line[:-1].split("--")[0] for line in ifile if line.split("--")[0] != ""]
-        assert len(lines) % 3 == 0
-        while len(lines) > 0:
-            l1, l2, l3 = lines[0], lines[1], lines[2]
-            lines = lines[3:]
-            kind = l1[:6]
-            if kind == "PREFIX":
-                self.prefix_list.append(PrefixEntry(l1, l2, l3))
-            elif kind == "SUFFIX":
-                self.suffix_list.append(SuffixEntry(l1, l2, l3))
-            elif kind == "TACKON":
-                self.tackon_list.append(TackonEntry(l1, l2, l3))
-            else:
-                raise ValueError(lines)
-
-    # @profile
-    def load_uniques(self, path: str):
-        with open(os.path.join(path, "DataFiles/UNIQUES.txt"), encoding="ISO-8859-1") as ifile:
-            lines = [line[:-1].split("--")[0] for line in ifile if line.split("--")[0] != ""]
-        assert len(lines) % 3 == 0
-        while len(lines) > 0:
-            l1, l2, l3 = lines[0], lines[1], lines[2]
-            lines = lines[3:]
-            kind = l1[:6]
-            u = UniqueEntry(l1, l2, l3)
-            self.uniques[u.word] = u
-
-class JoinedLexiconFast(BakedLexicon):
-    def __init__(self, path, decode_func):
-        BakedLexicon.__init__(self, path, "BAKED_JOINED", decode_func)
 
 
 TWO_WORD_TEMP = u"""
@@ -882,7 +742,7 @@ class AdverbFormater(FormaterBase):
 
 class PrepositionFormater(FormaterBase):
     def setup(self) -> None:
-        self.inflection_rule = [infl for infl in self.lex.inflection_list if infl.part_of_speech == PartOfSpeech.Preposition][0]
+        self.inflection_rule = self.lex.get_preposition_inflection_rule()
 
     def make_cannon_form_str(self, dic: DictionaryKey) -> str:
         return dic.make_form(self.inflection_rule)
@@ -907,7 +767,7 @@ class PrepositionFormater(FormaterBase):
 
 class ConjunctionFormater(FormaterBase):
     def setup(self) -> None:
-        self.inflection_rule = [infl for infl in self.lex.inflection_list if infl.part_of_speech == PartOfSpeech.Conjunction][0]
+        self.inflection_rule = self.lex.get_conjunction_inflection_rule()
 
     def make_cannon_form_str(self, dic: DictionaryKey) -> str:
         return dic.make_form(self.inflection_rule)
@@ -929,8 +789,7 @@ class ConjunctionFormater(FormaterBase):
 
 class InterjectionFormater(FormaterBase):
     def setup(self) -> None:
-        self.inflection_rule = [infl for infl in self.lex.inflection_list if infl.part_of_speech == PartOfSpeech.Interjection][0]
-
+        self.inflection_rule = self.lex.get_interjection_inflection_rule()
     def make_cannon_form_str(self, dic: DictionaryKey) -> str:
         return dic.make_form(self.inflection_rule)
 
@@ -1072,7 +931,7 @@ class PackonFormater(FormaterBase):
         return ""
 
 
-class Formater:
+class JoinedFormater(searcher.Formater):
     def __init__(self,
                  lex: Lexicon,
                  noun: NounFormater,
@@ -1085,7 +944,7 @@ class Formater:
                  interjection: InterjectionFormater,
                  number: NumberFormater,
                  packon: PackonFormater):
-        self.lex = lex
+        searcher.Formater.__init__(self, lex)
         self.map = {
             PartOfSpeech.Noun: noun,
             PartOfSpeech.Pronoun: pronoun,
@@ -1116,7 +975,7 @@ class Formater:
     #     defen = "\n".join([l[:79] if len(l) >= 79 else l for l in form_group.dic.definition.lines])
     #     return before, cannon, defen
 
-    def display_entry_query(self, query: EntryQuery, no_newline=False) -> str:
+    def display_entry_query(self, query: EntryQuery) -> str:
         if query.two_words:
             assert query.two_words_query1 is not None
             assert query.two_words_query2 is not None
@@ -1234,9 +1093,8 @@ class Formater:
             cannon_form_rows = [CANNON_MAIN_ROW_TEMP.format(
                 cannon_form_slot=dic_formater.make_cannon_form_str(format_group.lemma.dictionary_keys[0]),
                 cannon_form_suffix=(" +" + format_group.tackon.tackon) if format_group.tackon is not None else "",
-                button_space=("""<button class="btn btn-secondary" type="button"
-				data-toggle="collapse" data-target="#collapseSpot{id}"
-				aria-expanded="false" aria-controls="collapseSpot">L&S</button>""".format(id=group_id)) if format_group.lemma.html_data else ""
+                button_space=("""<button class="btn btn-secondary" type="button"\ndata-toggle="collapse" data-target="#collapseSpot{id}"\naria-expanded="false" aria-controls="collapseSpot">L&S</button>"""
+                              .format(id=group_id)) if format_group.lemma.html_data else ""
             )]
             for key in format_group.lemma.dictionary_keys[1:]:
                 cannon_form_rows.append(CANNON_ALT_ROW_TEMP.format(cannon_form_slot=dic_formater.make_cannon_form_str(key)))
@@ -1279,15 +1137,12 @@ class Formater:
             ))
         return "".join(output)
 
-GLOB_TAB = {}
-def init(path: str, fast: bool = True, decode_func=None) -> Tuple[JoinedLexicon, Formater]:
-    if path in GLOB_TAB:
-        return GLOB_TAB[path]
-    if decode_func is None:
-        decode_func = lambda s: s
-    J_LEX = (JoinedLexiconFast(path, decode_func) if fast else JoinedLexicon(path, ref_def=True))
-    print("DONE MADE LEX, INITING FORMATER")
-    formater = Formater(J_LEX,
+
+def init(path: str, fast: bool = True, decode_func=None) -> Tuple[NewStyle_Json_Lexicon, JoinedFormater]:
+    J_LEX = (BakedLexicon("BAKED_JOINED") if fast else NewStyle_Json_Lexicon("GeneratedFiles/JOINED_ONLY_REF_DEF.txt"))  #"GeneratedFiles/JOINED.txt" if not self.ref_def else
+    J_LEX.load(path)
+
+    formater = JoinedFormater(J_LEX,
                         NounFormater(J_LEX),
                         PronounFormater(J_LEX),
                         VerbFormater(J_LEX),
@@ -1298,8 +1153,7 @@ def init(path: str, fast: bool = True, decode_func=None) -> Tuple[JoinedLexicon,
                         InterjectionFormater(J_LEX),
                         NumberFormater(J_LEX),
                         PackonFormater(J_LEX))
-    print("INITED FOMRATER")
-    GLOB_TAB[path] = (J_LEX, formater)
+
     return J_LEX, formater
 
 # init("/home/henry/Desktop/latin_website/PyWhitakersWords/")

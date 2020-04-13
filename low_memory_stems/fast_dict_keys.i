@@ -105,10 +105,17 @@ DictionaryKey.pos_data = property(lambda self: _get_pos_data_dict_key(self))
 setattr(DictionaryKey, "make_form", make_form)
 setattr(PackonDictData, "accepts_tackon", lambda self, tackon: tackon is not None and tackon.tackon == self.tackon_str and tackon.pos == PartOfSpeech.Packon)
 
-setattr(StemGroup, "__getitem__",  lambda self, i: self._get_elem(i) if self._get_elem(i) != "zzz" else None)
+def _get_stem_stem_group(stem_group, indx):
+    if indx not in {0,1,2,3}:
+        raise ValueError()
+    e = stem_group._get_elem(indx)
+    return e if e != "zzz" else None
+
+setattr(StemGroup, "__getitem__", _get_stem_stem_group)
+setattr(StemGroup, "__iter__", lambda s: iter([s[i] for i in [0,1,2,3]]))
 
 
-extract_html_data_func = lambda s:""
+extract_html_data_func = lambda s: s
 def set_extract_html_data_func(func):
     # the function should take in a string, _stored_html_data, and output a string
     assert func is not None
@@ -151,6 +158,8 @@ class DictionaryKeyListIterator:
             raise StopIteration()
         self.i +=1
         return self.arr[i]
+
+    next = __next__
 
     def __iter__(self):
         return self

@@ -13,6 +13,18 @@ import enum
 ########################################################################################################################
 
 
+class Formater(ABC):
+    def __init__(self, lex: 'Lexicon'):
+        self.lex = lex
+
+    @abstractmethod
+    def display_entry_query(self, query: 'EntryQuery') -> str:
+        pass
+
+    def parse(self, s: str) -> str:
+        return self.display_entry_query(get_matches(self.lex, s))
+
+
 class FormGroup:
     def __init__(self,
                  lemma: DictionaryLemma,
