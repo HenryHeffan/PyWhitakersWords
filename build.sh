@@ -1,5 +1,7 @@
 #!/bin/bash
 
+shopt -s extglob
+
 # Default values of arguments
 SHOULD_BAKE=true
 
