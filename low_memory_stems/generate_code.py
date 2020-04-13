@@ -437,11 +437,11 @@ def add_baked_dictionary(d, name):
 #                     string definition, string html_data, int index, DictionaryKey* keys, int keys_len)
 
 from core_files.whitakers_words import init
-ww, _ = init("/home/henry/Desktop/PyWhitakersWords/", fast=False)
+ww, _ = init(PATH, fast=False)
 add_baked_dictionary(ww, "WW")
 
 from core_files.joined_formater_html import init
-joined, _ = init("/home/henry/Desktop/PyWhitakersWords/", fast=False)
+joined, _ = init(PATH, fast=False)
 # for e in joined.dictionary_lemmata:
 #     print(e.html_data)
 add_baked_dictionary(joined, "JOINED")
