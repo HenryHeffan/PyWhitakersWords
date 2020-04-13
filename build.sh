@@ -21,9 +21,6 @@ timestamp() {
 # TODO Update includes path stuff
 # TODO add skip bake flag
 echo "BUILDING - DOING SETUP"
-# rm -rf low_memory_stems/build
-# rm -rf low_memory_stems/python3
-# rm -rf low_memory_stems/python2
 mkdir -p low_memory_stems/build
 mkdir -p low_memory_stems/python3
 mkdir -p low_memory_stems/python2
