@@ -206,9 +206,13 @@ o_h.write("""
 o_cpp.close()
 o_h.close()
 
+
+
 if not SHOULD_BAKE:
     exit(0)
 
+
+print("DOING BAKING GENERATION")
 
 b_h = open(OPATH + "baked.h", "w")
 
@@ -438,10 +442,12 @@ def add_baked_dictionary(d, name):
 
 from core_files.whitakers_words import init
 ww, _ = init(PATH, fast=False)
+print("INITED WW")
 add_baked_dictionary(ww, "WW")
 
 from core_files.joined_formater_html import init
 joined, _ = init(PATH, fast=False)
+print("INITED JOINED")
 # for e in joined.dictionary_lemmata:
 #     print(e.html_data)
 add_baked_dictionary(joined, "JOINED")
