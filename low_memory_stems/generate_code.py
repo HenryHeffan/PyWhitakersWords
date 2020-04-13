@@ -298,6 +298,7 @@ def add_baked_dictionary(d, name):
             k.array_index = i_keys
             i_keys+=1
             k.true_stem = True
+        print(l.html_data)
         LEMMATA.append(
         """{lb}PartOfSpeech::{part_of_speech}, {translation_metadata}, "{definition}", "{html_data}", {index}, {keys}, {keys_len}{rb}""".format(
             part_of_speech=l.part_of_speech.name,
