@@ -50,7 +50,7 @@ mkdir -p low_memory_stems/python2
        echo "g++ -std=c++0x -c -fpic $FILE_NAME"
        g++ -std=c++0x -c -fpic $FILE_NAME
     done &&
-    ar rc baked.a baked_*.o
+    g++ -std=c++0x -O3 -shared -o libbaked.so baked_*.o
     timestamp
   fi
   ) &&

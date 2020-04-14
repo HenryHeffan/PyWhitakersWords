@@ -1051,7 +1051,9 @@ class DictionaryKey:
     def load(data) -> 'DictionaryKey':
         data=data.split(" ", maxsplit=5)
         pos = PartOfSpeech.from_str(data[4])
-        return DictionaryKey(tuple([None if d == "None" else d for d in data[0:4]]),
+        MP = {"zzz": None, "xxxxx": ""}
+        decode_stem = lambda x: x if x not in MP else MP[x]
+        return DictionaryKey(tuple([decode_stem(d) for d in data[0:4]]),
                              pos,
                              POS_DICT_ENTRY_CLASS_MP[pos].load(data[5]))
 

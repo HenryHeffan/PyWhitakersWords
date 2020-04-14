@@ -12,7 +12,7 @@ from core_files.entry_and_inflections import *
 if len(sys.argv) >= 2:
     SHOULD_BAKE = (sys.argv[1] != "false")
 else:
-    SHOULD_BAKE = False
+    SHOULD_BAKE = True
 
 
 o_cpp = open(OPATH + "generated.cpp", "w")
@@ -224,7 +224,7 @@ print("DONE generated.h and generated.cpp")
 
 if not SHOULD_BAKE:
     exit(0)
-
+MAX_VEC_SIZE = 2**15
 
 print("DOING BAKING GENERATION")
 
@@ -350,12 +350,28 @@ def add_baked_dictionary(d, name):
     b_cpp_hashmaps = open(OPATH + "baked_hashmaps_{}_small.cpp".format(name.lower()), "w")
     b_cpp_hashmaps.write('\n#include "baked.h"\n')
     b_cpp_hashmaps.close()
-    for key_indx_var, (mp_key, mp) in enumerate(d._stem_map.items()):
-        if(len(mp) < 400):
+
+    file_indx = [0]
+    def dump_vector(decl, arr, l):
+        if(l < 400):
             b_cpp_hashmaps = open(OPATH + "baked_hashmaps_{}_small.cpp".format(name.lower()), "a")
         else:
-            b_cpp_hashmaps = open(OPATH + "baked_hashmaps_{}_{}.cpp".format(name.lower(), key_indx_var), "w")
+            b_cpp_hashmaps = open(OPATH + "baked_hashmaps_{}_{}.cpp".format(name.lower(), file_indx[0]), "w")
             b_cpp_hashmaps.write('\n#include "baked.h"\n')
+            file_indx[0] += 1
+
+        b_h.write("extern ")
+        b_h.write(decl)
+        b_h.write(";\n")
+
+        b_cpp_hashmaps.write(decl)
+        b_cpp_hashmaps.write(" = ")
+        b_cpp_hashmaps.write(arr)
+        b_cpp_hashmaps.write(";\n")
+
+        b_cpp_hashmaps.close()
+
+    for mp_key, mp in d._stem_map.items():
         # if len(mp) == 0:
         #     continue
         from math import log2
@@ -376,6 +392,8 @@ def add_baked_dictionary(d, name):
                 indx = (indx + 1) % len(HASH_LIST)
             mb = max(mb, lb)
             HASH_LIST[indx] = (stem, vector_i, len(mp[stem]))
+            # if len(mp[stem]) > 5:
+            #     print("TOO LONG", len(mp[stem]), [i.stems for i in mp[stem]])
             for k in mp[stem]:
                 KEY_PTR_VECTOR.append("&" + name.upper() + "_KEYS[" + str(k.array_index) + "]")
                 vector_i += 1
@@ -385,9 +403,11 @@ def add_baked_dictionary(d, name):
         # b_h.write("const extern DictionaryKey " + name.upper() +
         #           "_KEY_[" + str(len(TRUE_KEYS)) + "];\n")
         VECTOR_NAME = name.upper() + "_" + mp_key[0].name + "_" + str(mp_key[1]) + "_KEY_VECTOR"
-        b_cpp_hashmaps.write("const DictionaryKey *"
-                    + VECTOR_NAME + "[" + str(len(KEY_PTR_VECTOR)) + "] = {"
-                    + (", \n".join(KEY_PTR_VECTOR)) + "};\n")
+        dump_vector(
+            "const DictionaryKey *" + VECTOR_NAME + "[" + str(len(KEY_PTR_VECTOR)) + "]",
+            "{" + (", \n".join(KEY_PTR_VECTOR)) + "}",
+            len(KEY_PTR_VECTOR))
+
         HASH_LIST_STRS = ["HashTableCell(NULL, 0, 0x80000000)" if e is None else
                           "HashTableCell(&{VECTOR_NAME}[{vec_indx}], {ct}, {hash})".format(
                               vec_indx = e[1],
@@ -397,17 +417,15 @@ def add_baked_dictionary(d, name):
                               VECTOR_NAME=VECTOR_NAME,
                               rb = "}"
                           ) for e in HASH_LIST]
+
         hashmap_name = name.upper() + "_" + mp_key[0].name + "_" + str(mp_key[1]) + "_HASH_TABLE"
-        b_h.write("extern const HashTableCell " + hashmap_name + "[" + str(len(HASH_LIST_STRS)) + "];\n")
-        b_cpp_hashmaps.write("const HashTableCell " + hashmap_name + "[" + str(len(HASH_LIST_STRS)) + "] = {"
-                    + (", \n".join(HASH_LIST_STRS)) + "};\n")
+        dump_vector(
+            "const HashTableCell " + hashmap_name + "[" + str(len(HASH_LIST_STRS)) + "]",
+            "{" + (", \n".join(HASH_LIST_STRS)) + "}",
+            len(HASH_LIST_STRS))
+
         HASH_MAPS[mp_key] = (size, hashmap_name)
         b_cpp_hashmaps.close()
-
-    # HashTable *lookup_table[MAX_PartOfSpeech][4];
-    # HashTable(const HashTableCell *cells, const unsigned long len, const int key_string_index)
-    # HASH_MAP_STRS = [
-    # for pos in PartOfSpeech for stem_indx in [1,2,3,4]]
 
     b_cpp_hashmaps = open(OPATH + "baked_hashmaps_{}_joined.cpp".format(name.lower()), "w")
     b_cpp_hashmaps.write('\n#include "baked.h"\n')
