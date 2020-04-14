@@ -27,9 +27,10 @@
 
 %ignore operator<<;
 %ignore operator>>;
-
+%ignore StemGroup::StemGroup(const char*, const char*, const char*, const char*);
 %include "generated.h"
 %include "data_structures.h"
+
 
 %pythoncode %{
 

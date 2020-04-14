@@ -31,7 +31,7 @@ mkdir -p low_memory_stems/python2
   (
   if $SHOULD_BAKE
   then
-    rm -f build/baked.h build/baked.a build/baked_*.cpp build/baked_*.o
+    rm -f build/baked.h build/baked_*.cpp build/baked_*.o
   fi
   ) &&
   echo "GENERATING CODE" &&
@@ -55,8 +55,8 @@ mkdir -p low_memory_stems/python2
   fi
   ) &&
   echo "SHARED COMPILING" &&
-  g++ -std=c++0x -O3 -c -fpic generated.cpp &&
-  g++ -std=c++0x -O3 -c -fpic data_structures.cpp &&
+  g++ -std=c++0x -O3 -c -fpic generated.h generated.cpp &&
+  g++ -std=c++0x -O3 -c -fpic data_structures.h generated.h data_structures.cpp &&
   (
     (
       echo "MAKING PYTHON 3"

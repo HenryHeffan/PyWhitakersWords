@@ -6,16 +6,38 @@
 
 using namespace std;
 
+TranslationMetadata::TranslationMetadata(const char *s) {
+    // s is of length 5
+    this->age = static_cast<DictionaryAge>(s[0] - '0'); // TODO
+    this->area = s[1];
+    this->geo = s[2];
+    this->frequency = static_cast<DictionaryFrequency>(s[3] - '0'); // TODO
+    this->source = s[4];
+}
 
+const char *StemGroup::_get_cstr(int i) const
+{
+    if(i==0) {
+        return this->s1;
+    } else if(i==1) {
+        return this->s2;
+    } else if(i==2) {
+        return this->s3;
+    } else { // if(i==2) {
+        return this->s4;
+    }
+}
 const string StemGroup::_get_elem(int i) const
 {
-    //cerr<<"stem i: "<< i<<endl;
-    return string(this->cstrs[i]);
+
+    return string(this->_get_cstr(i));
 }
+StemGroup::StemGroup(const char *s1, const char *s2, const char *s3, const char *s4):
+                    s1(s1), s2(s2), s3(s3), s4(s4) {};
 
 DictionaryKey::DictionaryKey(const char *s1, const char *s2, const char *s3, const char *s4, const PartOfSpeech part_of_speech,
               const DictData *data, const DictionaryLemma *lemma):
-                   stems{s1, s2, s3, s4},
+                   stems(s1, s2, s3, s4),
                    part_of_speech(part_of_speech),
                    data(data),
                    lemma(lemma) {}
@@ -167,12 +189,15 @@ static const DictionaryLemma *KEY_VECTOR_TABLE;
 static const HashTable *lookup_table[MAX_PartOfSpeech][4];
 */
 
+HashTableCell::HashTableCell(const DictionaryKey **keys, const unsigned short ct_keys, const unsigned int hash):
+    keys(keys), ct_keys(ct_keys), hash(hash) {};
+
 const HashTableCell *HashTable::get_cell(const string &s) const {
     unsigned int hash = hash_string(s);
     int index = hash & ((1 << this->len_log2) - 1);
     while(this->cells[index].ct_keys != 0) {
         if(this->cells[index].hash == hash) {
-            if(this->cells[index].keys[0]->stems.cstrs[key_string_index] == s)
+            if(this->cells[index].keys[0]->stems._get_cstr(key_string_index) == s)
                 return &this->cells[index];
         }
 

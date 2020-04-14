@@ -21,24 +21,22 @@ public:
     DictionaryFrequency frequency;  //:  = DictionaryFrequency.from_str(s[6])
     char source;  //: str = s[8]
 
-
-    TranslationMetadata(const char *s) {
-        // s is of length 5
-        this->age = static_cast<DictionaryAge>(s[0] - '0'); // TODO
-        this->area = s[1];
-        this->geo = s[2];
-        this->frequency = static_cast<DictionaryFrequency>(s[3] - '0'); // TODO
-        this->source = s[4];
-    }
+    TranslationMetadata(const char *s);
 
 };
 
 
 class StemGroup {
 public:
-    const char *cstrs[4];
+    const char *s1;
+    const char *s2;
+    const char *s3;
+    const char *s4;
 
+    const char *_get_cstr(int i) const;
     const string _get_elem(int i) const;
+
+    StemGroup(const char *s1, const char *s2, const char *s3, const char *s4);
 };
 
 
@@ -119,8 +117,7 @@ public:
     const unsigned short ct_keys; // if this is 0, then the cell is empty
     const unsigned int hash;
 
-    HashTableCell(const DictionaryKey **keys, const unsigned short ct_keys, const unsigned int hash):
-                  keys(keys), ct_keys(ct_keys), hash(hash) {};
+    HashTableCell(const DictionaryKey **keys, const unsigned short ct_keys, const unsigned int hash);
 };
 
 
