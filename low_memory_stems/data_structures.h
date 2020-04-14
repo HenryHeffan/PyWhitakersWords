@@ -21,7 +21,15 @@ public:
     DictionaryFrequency frequency;  //:  = DictionaryFrequency.from_str(s[6])
     char source;  //: str = s[8]
 
-    TranslationMetadata(const char *s);
+
+    TranslationMetadata(const char *s) {
+        // s is of length 5
+        this->age = static_cast<DictionaryAge>(s[0] - '0'); // TODO
+        this->area = s[1];
+        this->geo = s[2];
+        this->frequency = static_cast<DictionaryFrequency>(s[3] - '0'); // TODO
+        this->source = s[4];
+    }
 
 };
 
@@ -111,7 +119,8 @@ public:
     const unsigned short ct_keys; // if this is 0, then the cell is empty
     const unsigned int hash;
 
-    HashTableCell(const DictionaryKey **keys, const unsigned short ct_keys, const unsigned int hash);
+    HashTableCell(const DictionaryKey **keys, const unsigned short ct_keys, const unsigned int hash):
+                  keys(keys), ct_keys(ct_keys), hash(hash) {};
 };
 
 

@@ -6,14 +6,6 @@
 
 using namespace std;
 
-TranslationMetadata::TranslationMetadata(const char *s) {
-    // s is of length 5
-    this->age = static_cast<DictionaryAge>(s[0] - '0'); // TODO
-    this->area = s[1];
-    this->geo = s[2];
-    this->frequency = static_cast<DictionaryFrequency>(s[3] - '0'); // TODO
-    this->source = s[4];
-}
 
 const string StemGroup::_get_elem(int i) const
 {
@@ -174,9 +166,6 @@ static const DictionaryKey *KEYS;
 static const DictionaryLemma *KEY_VECTOR_TABLE;
 static const HashTable *lookup_table[MAX_PartOfSpeech][4];
 */
-
-HashTableCell::HashTableCell(const DictionaryKey **keys, const unsigned short ct_keys, const unsigned int hash):
-    keys(keys), ct_keys(ct_keys), hash(hash) {};
 
 const HashTableCell *HashTable::get_cell(const string &s) const {
     unsigned int hash = hash_string(s);

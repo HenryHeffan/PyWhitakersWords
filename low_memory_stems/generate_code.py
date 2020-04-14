@@ -1,15 +1,19 @@
+#!/bin/share/python3
+
 # this file is run directly, so add the proper path
 import os
 import sys
 PATH = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-sys.path.insert(0, PATH)
 OPATH = os.path.join(PATH, "low_memory_stems/build/")
+sys.path.insert(0, PATH)
 
 from core_files.entry_and_inflections import *
 
-import sys
+if len(sys.argv) >= 2:
+    SHOULD_BAKE = (sys.argv[1] != "false")
+else:
+    SHOULD_BAKE = False
 
-SHOULD_BAKE = (sys.argv[1] != "false") if len(sys.argv) >= 2 else False
 
 o_cpp = open(OPATH + "generated.cpp", "w")
 o_h = open(OPATH + "generated.h", "w")
@@ -206,6 +210,16 @@ o_h.write("""
 o_cpp.close()
 o_h.close()
 
+print("DONE generated.h and generated.cpp")
+
+
+########################################################################################################################
+########################################################################################################################
+########################################################################################################################
+#                                               Bake Cpp Dictionaryies                                                 #
+########################################################################################################################
+########################################################################################################################
+########################################################################################################################
 
 
 if not SHOULD_BAKE:
@@ -232,7 +246,6 @@ b_h.write(str(time()))
 b_h.write("\n\n")
 
 # NOW WE GENERATE THE STATIC HASH TABLES
-
 
 def add_baked_dictionary(d, name):
     b_cpp_keys = open(OPATH + "baked_keys_{}.cpp".format(name.lower()), "w")
@@ -420,23 +433,10 @@ def add_baked_dictionary(d, name):
         ct = len(LEMMATA)
     ))
 
-
     b_cpp_hashmaps.close()
     b_cpp_lemmas.close()
     b_cpp_keys.close()
 
-    # b_h.write("const extern DictionaryKey * "+name.upper()+
-    #             "_KEY_VECTORS[" + str(len(KEY_VECTOR)) + "];\n")
-    # b_cpp.write("const DictionaryKey * "+name.upper()+
-    #             "_KEY_VECTORS[" + str(len(KEY_VECTOR)) + "] = {" + (", \n".join(KEY_VECTOR)) + "};\n")
-
-
-# CUR DictionaryKey(StemGroup stems, PartOfSpeech part_of_speech, DictData *data)
-# NEW DictionaryKey(StemGroup stems, PartOfSpeech part_of_speech, DictData *data, DictionaryLemma* lemma)
-# CUR DictionaryLemma(PartOfSpeech part_of_speech, TranslationMetadata translation_metadata,
-#                     string definition, string html_data, int index)
-# NEW DictionaryLemma(PartOfSpeech part_of_speech, TranslationMetadata translation_metadata,
-#                     string definition, string html_data, int index, DictionaryKey* keys, int keys_len)
 
 from core_files.whitakers_words import init
 ww, _ = init(PATH, fast=False)

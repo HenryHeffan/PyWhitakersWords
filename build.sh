@@ -31,7 +31,7 @@ mkdir -p low_memory_stems/python2
   (
   if $SHOULD_BAKE
   then
-    rm -f build/baked.h build/baked_*.cpp build/baked_*.o
+    rm -f build/baked.h build/baked.a build/baked_*.cpp build/baked_*.o
   fi
   ) &&
   echo "GENERATING CODE" &&
@@ -50,6 +50,7 @@ mkdir -p low_memory_stems/python2
        echo "g++ -std=c++0x -c -fpic $FILE_NAME"
        g++ -std=c++0x -c -fpic $FILE_NAME
     done &&
+    ar rc baked.a baked_*.o
     timestamp
   fi
   ) &&
@@ -62,7 +63,7 @@ mkdir -p low_memory_stems/python2
       CONFIG_PY3=$(python3.6-config --includes) &&
       swig -c++ -python -py3 fast_dict_keys.i &&
       g++ -std=c++0x -O3 -c -fpic fast_dict_keys_wrap.cxx $CONFIG_PY3 &&
-      g++ -std=c++0x -O3 -shared -o _fast_dict_keys.so fast_dict_keys_wrap.o generated.o data_structures.o baked_*.o &&
+      g++ -std=c++0x -O3 -shared -o _fast_dict_keys.so fast_dict_keys_wrap.o generated.o data_structures.o baked.a &&
       mv _fast_dict_keys.so ../python3/_fast_dict_keys.so &&
       mv fast_dict_keys.py ../python3/fast_dict_keys.py &&
       touch ../python3/__init__.py
@@ -72,7 +73,7 @@ mkdir -p low_memory_stems/python2
       CONFIG_PY2=$(python2.7-config --includes)
       swig -c++ -python fast_dict_keys.i &&
       g++ -std=c++0x -O3 -c -fpic fast_dict_keys_wrap.cxx $CONFIG_PY2 &&
-      g++ -std=c++0x -O3 -shared -o _fast_dict_keys.so fast_dict_keys_wrap.o generated.o data_structures.o baked_*.o &&
+      g++ -std=c++0x -O3 -shared -o _fast_dict_keys.so fast_dict_keys_wrap.o generated.o data_structures.o baked.a &&
       mv _fast_dict_keys.so ../python2/_fast_dict_keys.so &&
       mv fast_dict_keys.py ../python2/fast_dict_keys.py &&
       touch ../python2/__init__.py
