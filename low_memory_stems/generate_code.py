@@ -297,7 +297,7 @@ def add_baked_dictionary(d, name):
         vector_index = i_keys
         for k in l.dictionary_keys:
             TRUE_KEYS.append(
-                """{lb}"{s1}", "{s2}", "{s3}", "{s4}", PartOfSpeech::{part_of_speech}, {dict_data}, {lemma_ptr}{rb}""".format(
+                """DictionaryKey("{s1}", "{s2}", "{s3}", "{s4}", PartOfSpeech::{part_of_speech}, {dict_data}, {lemma_ptr})""".format(
                     part_of_speech=k.part_of_speech.name,
                     s1=k.stems[0] if k.stems[0] is not None else "zzz",
                     s2=k.stems[1] if k.stems[1] is not None else "zzz",
@@ -312,7 +312,7 @@ def add_baked_dictionary(d, name):
             i_keys+=1
             k.true_stem = True
         LEMMATA.append(
-        """{lb}PartOfSpeech::{part_of_speech}, {translation_metadata}, "{definition}", "{html_data}", {index}, {keys}, {keys_len}{rb}""".format(
+        """DictionaryLemma(PartOfSpeech::{part_of_speech}, {translation_metadata}, "{definition}", "{html_data}", {index}, {keys}, {keys_len})""".format(
             part_of_speech=l.part_of_speech.name,
             translation_metadata='"{}{}{}{}{}"'.format(
                 int(l.translation_metadata.age),
@@ -388,8 +388,8 @@ def add_baked_dictionary(d, name):
         b_cpp_hashmaps.write("const DictionaryKey *"
                     + VECTOR_NAME + "[" + str(len(KEY_PTR_VECTOR)) + "] = {"
                     + (", \n".join(KEY_PTR_VECTOR)) + "};\n")
-        HASH_LIST_STRS = ["{NULL, 0, 0x80000000}" if e is None else
-                          "{lb}&{VECTOR_NAME}[{vec_indx}], {ct}, {hash}{rb}".format(
+        HASH_LIST_STRS = ["HashTableCell(NULL, 0, 0x80000000)" if e is None else
+                          "HashTableCell(&{VECTOR_NAME}[{vec_indx}], {ct}, {hash})".format(
                               vec_indx = e[1],
                               ct = e[2],
                               hash = hash_string(e[0]),
@@ -416,9 +416,7 @@ def add_baked_dictionary(d, name):
     b_cpp_hashmaps.write("const HashTable "+name.upper()+
                 "_HASHTABLES[MAX_PartOfSpeech][4] = {" + (", \n    ".join([
         "{" + (", \n        ".join([
-                "{lb}{cells_ptr}, {len_log2}, {key_indx}{rb}".format(
-                    lb="{",
-                    rb="}",
+                "HashTable({cells_ptr}, {len_log2}, {key_indx})".format(
                     cells_ptr=HASH_MAPS[(pos, stem_indx)][1],
                     len_log2=HASH_MAPS[(pos, stem_indx)][0],
                     key_indx=stem_indx - 1
