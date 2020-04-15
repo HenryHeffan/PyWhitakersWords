@@ -1938,8 +1938,8 @@ class OldStyle_DICTLINE_Lexicon(PythonDictLexicon):
             last_lemma: Optional[DictionaryLemma] = None
             working_lemma: Optional[DictionaryLemma] = None
             for line in ifile:
-                # if index > 100:
-                #     break
+                if index > 100:
+                    break
                 # strip out the raw line into its groups
                 __stems = [line[:19].strip(), line[19:2 * 19].strip(), line[2 * 19:3 * 19].strip(),
                            line[3 * 19:4 * 19].strip()]
@@ -2021,7 +2021,7 @@ class NewStyle_Json_Lexicon(PythonDictLexicon):
     def load_dictionary(self, path: str):
         self._stem_map = {(pos, i): {} for pos in PartOfSpeech for i in [1,2,3,4]}
         with open(os.path.join(path, self.file_name), "r", encoding='utf-8') as i:
-            l = json.load(i)
+            l = json.load(i)  [:100]
         dictionary_lemmata = [DictionaryLemma.load(d) for d in l]
         for i, lemma in enumerate(dictionary_lemmata):
             self._insert_lemma(lemma, lemma.index)

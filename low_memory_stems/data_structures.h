@@ -3,26 +3,22 @@
 #define SRC_DATA_STRUCTURES_H_
 
 #include "assert.h"
-#include "assert.h"
-#include <vector>
-#include <string>
 #include "generated.h"
+#include <string>
 
 using namespace std;
 
 class DictionaryLemma;
 
-
 class TranslationMetadata {
 public:
-    DictionaryAge age;  //:  = DictionaryAge.from_str(s[0])
+    ENUM_VAR age;  //:  = DictionaryAge.from_str(s[0])
     char area;  //: str = s[2]
     char geo;  //: str = s[4]
-    DictionaryFrequency frequency;  //:  = DictionaryFrequency.from_str(s[6])
+    ENUM_VAR frequency;  //:  = DictionaryFrequency.from_str(s[6])
     char source;  //: str = s[8]
 
     TranslationMetadata(const char *s);
-
 };
 
 
@@ -45,11 +41,11 @@ private:
     const DictData *data;
 public:
     const StemGroup stems;
-    const PartOfSpeech part_of_speech;
+    const int part_of_speech;
     const DictionaryLemma *lemma;
 
     DictionaryKey(const char *s1, const char *s2, const char *s3, const char *s4,
-                  const PartOfSpeech part_of_speech, const DictData *data, const DictionaryLemma *lemma);
+                  const int part_of_speech, const DictData *data, const DictionaryLemma *lemma);
 
     const NounDictData *_property_noun_data() const;
     const PronounDictData *_property_pronoun_data() const;
@@ -95,11 +91,11 @@ class DictionaryLemma {
     const DictionaryKey *dictionary_keys_array;
     const int dictionary_keys_ct;
 public:
-    const PartOfSpeech part_of_speech;
+    const int part_of_speech;
     const int index;
 
     DictionaryLemma(
-        PartOfSpeech part_of_speech,
+        int part_of_speech,
         const char *translation_metadata,
         const char *definition, const char *html_data,
         int index, const DictionaryKey *keys, int keys_ct);
@@ -121,15 +117,27 @@ public:
 };
 
 
+class HashTableBlock {
+public:
+    const HashTableCell *cells;
+    HashTableBlock(const HashTableCell *cells): cells(cells)  {};
+};
+
+// Compiling really large files is hard on my computer, and doesnt work on my server. Therefore we break the large
+// arrays into blocks. Baking them into the executable gets around the memory speed limits on my server, which allows
+ // the program to load much faster
+extern const int MAX_BLOCK_SIZE_EXP;
+extern const int MAX_BLOCK_SIZE;
+
 class HashTable {
 private:
-    const HashTableCell *cells; // will assume load factor is not 100 percent, should be >50
+    const HashTableBlock *blocks; // will assume load factor is not 100 percent, should be >50
     const unsigned long len_log2;
     const int key_string_index; // this is used for checking the actual string on lookup
 
     const HashTableCell *get_cell(const string &s) const;
 public:
-    HashTable(const HashTableCell *cells, const unsigned long len_log2, const int key_string_index);
+    HashTable(const HashTableBlock *blocks, const unsigned long len_log2, const int key_string_index);
     HashTable();
 
     bool has(const string &s) const;

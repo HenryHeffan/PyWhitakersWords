@@ -16,6 +16,7 @@ def run():
         J_FORM.display_entry_query(get_matches(J_LEX, word))
         WW_FORM.display_entry_query(get_matches(WW_LEX, word))
 
-    # print(WW_FORM.display_entry_query(get_matches(WW_LEX, "qui")))
+    print(WW_FORM.display_entry_query(get_matches(WW_LEX, "qui")))
+    assert(len(get_matches(WW_LEX, "qui").unsyncopated_form_groups) >= 1)
 
 run()

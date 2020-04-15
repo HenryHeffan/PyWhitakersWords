@@ -19,71 +19,78 @@ o_cpp = open(OPATH + "generated.cpp", "w")
 o_h = open(OPATH + "generated.h", "w")
 
 
+enum_list = []
 def output_enum(c):
-    STR_CPP="""
-/*
-enum class {class_name} {lb}
-    {items}
-{rb};
-*/
-static const string {class_name}Strs[] = {lb}{strs}{rb};
-string str_val_{class_name}({class_name} e)
-{lb}
-    return {class_name}Strs[static_cast<int>(e)];
-{rb}
-ostream& operator<<(ostream& os, const {class_name}& e)
-{lb}
-    os << {class_name}Strs[static_cast<int>(e)];
-    return os;
-{rb}
-istream& operator>>(istream& is, {class_name}& e) {lb}
-    // read from lhs into rhs 
-    string l;
-    is >> l;
-    //cerr << ">>>"<<l <<"<<<\\n";
-    for(int i = 0; i < {items_len}; i++)
-    {lb}
-        if(l == {class_name}Strs[i])
-        {lb}
-            e = static_cast<{class_name}>(i);
-            return is;
-        {rb}
-    {rb}
-    abort();
-{rb}"""
-    STR_H = """
-
-enum class {class_name} {lb}
-    {items}
-{rb};
-static const int MAX_{class_name} = {items_len};
-
-//static const string {class_name}Strs[] = {lb}{strs}{rb};
-ostream& operator<<(ostream& os, const {class_name}& e);
-istream& operator>>(istream& is, {class_name}& e);
-string str_val_{class_name}({class_name} e);
-"""
-    assert len(list(c)) == max([int(e) for e in c]) + 1, (c.__name__, len(list(c)), max([int(e) for e in c]) + 1)
-    assert len(set(list(c))) == len(list(c)) # so all the elements unque
-    assert min([int(e) for e in c]) == 0 # therefore the elemnts are 0 ... item_len-1
-
-    items_len = len(list(c))
-    o_cpp.write(STR_CPP.format(
-        class_name= c.__name__,
-        items = ", ".join(["{} = {}".format(e.name, int(e)) for e in c]),
-        strs=", ".join(['"{}"'.format(c.str_val(i)) for i in range(items_len)]),
-        items_len=items_len,
-        lb="{",
-        rb="}"
+    enum_list.append(c)
+    o_h.write("static const int MAX_{class_name} = {items_len};\n\n".format(
+        class_name = c.__name__,
+        items_len = len(list(c))
     ))
-    o_h.write(STR_H.format(
-        class_name=c.__name__,
-        items=", ".join(["{} = {}".format(e.name, int(e)) for e in c]),
-        strs=", ".join(['"{}"'.format(c.str_val(e)) for e in c]),
-        items_len=len(list(c)),
-        lb="{",
-        rb="}"
-    ))
+#     STR_CPP="""
+# /*
+# enum class {class_name} {lb}
+#     {items}
+# {rb};
+# */
+# static const string {class_name}Strs[] = {lb}{strs}{rb};
+# string str_val_{class_name}({class_name} e)
+# {lb}
+#     return {class_name}Strs[static_cast<int>(e)];
+# {rb}
+# /*
+# ostream& operator<<(ostream& os, const {class_name}& e)
+# {lb}
+#     os << {class_name}Strs[static_cast<int>(e)];
+#     return os;
+# {rb}
+# istream& operator>>(istream& is, {class_name}& e) {lb}
+#     // read from lhs into rhs
+#     string l;
+#     is >> l;
+#     //cerr << ">>>"<<l <<"<<<\\n";
+#     for(int i = 0; i < {items_len}; i++)
+#     {lb}
+#         if(l == {class_name}Strs[i])
+#         {lb}
+#             e = static_cast<{class_name}>(i);
+#             return is;
+#         {rb}
+#     {rb}
+#     abort();
+# {rb}*/"""
+#     STR_H = """
+#
+# enum class {class_name} {lb}
+#     {items}
+# {rb};
+# static const int MAX_{class_name} = {items_len};
+#
+# //static const string {class_name}Strs[] = {lb}{strs}{rb};
+# //ostream& operator<<(ostream& os, const {class_name}& e);
+# //istream& operator>>(istream& is, {class_name}& e);
+# string str_val_{class_name}({class_name} e);
+# """
+#     assert len(list(c)) == max([int(e) for e in c]) + 1, (c.__name__, len(list(c)), max([int(e) for e in c]) + 1)
+#     assert len(set(list(c))) == len(list(c)) # so all the elements unque
+#     assert min([int(e) for e in c]) == 0 # therefore the elemnts are 0 ... item_len-1
+#
+#     items_len = len(list(c))
+#     o_cpp.write(STR_CPP.format(
+#         class_name= c.__name__,
+#         items = ", ".join(["{} = {}".format(e.name, int(e)) for e in c]),
+#         strs=", ".join(['"{}"'.format(c.str_val(i)) for i in range(items_len)]),
+#         items_len=items_len,
+#         lb="{",
+#         rb="}"
+#     ))
+#     o_h.write(STR_H.format(
+#         class_name=c.__name__,
+#         items=", ".join(["{} = {}".format(e.name, int(e)) for e in c]),
+#         strs=", ".join(['"{}"'.format(c.str_val(e)) for e in c]),
+#         items_len=len(list(c)),
+#         lb="{",
+#         rb="}"
+#     ))
     # print("""enum("{class_name}"); {class_name}.str_val=property(lambda x: str_val_{class_name}(x))""".format(class_name=c.__name__))
 
 
@@ -93,11 +100,11 @@ def output_dict(c):
 class {class_name} {lb}
 public:
 {items}
-    friend ostream& operator<<(ostream& os, const {class_name}& dt);
-    friend istream& operator>>(istream& is, {class_name}& dt);
+    //friend ostream& operator<<(ostream& os, const {class_name}& dt);
+    //friend istream& operator>>(istream& is, {class_name}& dt);
 {rb};
 */
-ostream& operator<<(ostream& os, const {class_name}& e)
+/*ostream& operator<<(ostream& os, const {class_name}& e)
 {lb}
     os{read_out};
     return os;
@@ -106,25 +113,28 @@ istream& operator>>(istream& is, {class_name}& e)
 {lb}
     is{read_in};
     return is;
-{rb}
+{rb}*/
 bool operator==(const {class_name}& a, const {class_name}& b)
 {lb}
     return {comp_code};
-{rb}"""
+{rb}
+"""
     STR_H = """
 class {class_name}: public DictData {lb}
 public:
 {items}
     {class_name}({arg_items}){init_items} {lb}{rb};
-    friend ostream& operator<<(ostream& os, const {class_name}& dt);
-    friend istream& operator>>(istream& is, {class_name}& dt);
+    //friend ostream& operator<<(ostream& os, const {class_name}& dt);
+    //friend istream& operator>>(istream& is, {class_name}& dt);
 {rb};
 
-ostream& operator<<(ostream& os, const {class_name}& e);
-istream& operator>>(istream& is, {class_name}& e);
+//ostream& operator<<(ostream& os, const {class_name}& e);
+//istream& operator>>(istream& is, {class_name}& e);
 bool operator==(const {class_name}& a, const {class_name}& b);
 """
-    MP = {"str": "string"}
+    MP = {c.__name__: "ENUM_VAR" for c in enum_list}
+    # MP = {}
+    MP["str"] = "string"
     CMPO = {"declention": "(int)", "declention_variant": "(int)", "conjugation": "(int)", "conjugation_variant": "(int)"}
     CMPI = {}  #"declention": "(DeclentionType)", "declention_variant": "(DeclentionSubtype)", "conjugation": "(ConjugationType)", "conjugation_variant": "(ConjugationSubtype)"}
 
@@ -157,9 +167,11 @@ o_h.write("""
 #ifndef SRC_GENERATED_H_
 #define SRC_GENERATED_H_
 
-#include <iostream>
+//#include <iostream>
 #include <string>
 using namespace std;
+
+typedef unsigned char ENUM_VAR;
 
 class DictData {};""")
 
@@ -224,7 +236,9 @@ print("DONE generated.h and generated.cpp")
 
 if not SHOULD_BAKE:
     exit(0)
-MAX_VEC_SIZE = 2**15
+
+MAX_BLOCK_SIZE_EXP = 13
+MAX_BLOCK_SIZE = 2**MAX_BLOCK_SIZE_EXP
 
 print("DOING BAKING GENERATION")
 
@@ -239,11 +253,13 @@ b_h.write("""
 #include "data_structures.h"
 #include "generated.h"
 using namespace std;
+""")
 
-// """)
-from time import time
-b_h.write(str(time()))
-b_h.write("\n\n")
+def add_MAX_BLOCK_SIZE(o, done=[False]):
+    if not done[0]:
+        done[0] = True
+        o.write("const int MAX_BLOCK_SIZE_EXP = {MAX_BLOCK_SIZE_EXP};\nconst int MAX_BLOCK_SIZE = {MAX_BLOCK_SIZE};\n"
+                .format(MAX_BLOCK_SIZE_EXP=MAX_BLOCK_SIZE_EXP, MAX_BLOCK_SIZE=MAX_BLOCK_SIZE))
 
 # NOW WE GENERATE THE STATIC HASH TABLES
 
@@ -252,6 +268,7 @@ def add_baked_dictionary(d, name):
     b_cpp_lemmas = open(OPATH + "baked_lemmas_{}.cpp".format(name.lower()), "w")
 
     b_cpp_keys.write('\n#include "baked.h"\n')
+    add_MAX_BLOCK_SIZE(b_cpp_keys)
     b_cpp_lemmas.write('\n#include "baked.h"\n')
 
     POS_DATA_MP = {pos: [] for pos in PartOfSpeech}
@@ -275,7 +292,7 @@ def add_baked_dictionary(d, name):
         def f_s(elem, name):
             at = getattr(elem, name)
             if isinstance(at, StringMappedEnum):
-                return at.__class__.__name__ + "::" + at.name
+                return str(int(at))  # at.__class__.__name__ + "::" + at.name
             if isinstance(at, str):
                 return "\"{}\"".format(at)
             return str(at)
@@ -297,8 +314,8 @@ def add_baked_dictionary(d, name):
         vector_index = i_keys
         for k in l.dictionary_keys:
             TRUE_KEYS.append(
-                """DictionaryKey("{s1}", "{s2}", "{s3}", "{s4}", PartOfSpeech::{part_of_speech}, {dict_data}, {lemma_ptr})""".format(
-                    part_of_speech=k.part_of_speech.name,
+                """DictionaryKey("{s1}", "{s2}", "{s3}", "{s4}", {part_of_speech}, {dict_data}, {lemma_ptr})""".format(
+                    part_of_speech=int(k.part_of_speech),
                     s1=k.stems[0] if k.stems[0] is not None else "zzz",
                     s2=k.stems[1] if k.stems[1] is not None else "zzz",
                     s3=k.stems[2] if k.stems[2] is not None else "zzz",
@@ -312,8 +329,8 @@ def add_baked_dictionary(d, name):
             i_keys+=1
             k.true_stem = True
         LEMMATA.append(
-        """DictionaryLemma(PartOfSpeech::{part_of_speech}, {translation_metadata}, "{definition}", "{html_data}", {index}, {keys}, {keys_len})""".format(
-            part_of_speech=l.part_of_speech.name,
+        """DictionaryLemma({part_of_speech}, {translation_metadata}, "{definition}", "{html_data}", {index}, {keys}, {keys_len})""".format(
+            part_of_speech=int(l.part_of_speech), #.name,
             translation_metadata='"{}{}{}{}{}"'.format(
                 int(l.translation_metadata.age),
                 l.translation_metadata.area,
@@ -418,11 +435,21 @@ def add_baked_dictionary(d, name):
                               rb = "}"
                           ) for e in HASH_LIST]
 
+        import math
+        BLOCK_CT = math.ceil(len(HASH_LIST_STRS) / MAX_BLOCK_SIZE)
+        for block_indx in range(BLOCK_CT):
+            SLICE = HASH_LIST_STRS[block_indx * MAX_BLOCK_SIZE : min((block_indx + 1) * MAX_BLOCK_SIZE, len(HASH_LIST_STRS))]
+            hashmap_name = name.upper() + "_" + mp_key[0].name + "_" + str(mp_key[1]) + "_HASH_TABLE_" + str(block_indx)
+            dump_vector(
+                "const HashTableCell " + hashmap_name  + "[" + str(len(SLICE)) + "]",
+                "{" + (", \n".join(SLICE)) + "}",
+                len(SLICE))
+
         hashmap_name = name.upper() + "_" + mp_key[0].name + "_" + str(mp_key[1]) + "_HASH_TABLE"
         dump_vector(
-            "const HashTableCell " + hashmap_name + "[" + str(len(HASH_LIST_STRS)) + "]",
-            "{" + (", \n".join(HASH_LIST_STRS)) + "}",
-            len(HASH_LIST_STRS))
+            "const HashTableBlock " + hashmap_name + "[" + str(BLOCK_CT) + "]",
+            "{" + (" ,".join(["HashTableBlock(" + hashmap_name + "_" + str(i) + ")" for i in range(BLOCK_CT)])) + "}",
+            BLOCK_CT)
 
         HASH_MAPS[mp_key] = (size, hashmap_name)
         b_cpp_hashmaps.close()

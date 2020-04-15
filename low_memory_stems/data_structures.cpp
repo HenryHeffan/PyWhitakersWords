@@ -8,10 +8,10 @@ using namespace std;
 
 TranslationMetadata::TranslationMetadata(const char *s) {
     // s is of length 5
-    this->age = static_cast<DictionaryAge>(s[0] - '0'); // TODO
+    this->age = s[0] - '0'; // TODO
     this->area = s[1];
     this->geo = s[2];
-    this->frequency = static_cast<DictionaryFrequency>(s[3] - '0'); // TODO
+    this->frequency = s[3] - '0'; // TODO
     this->source = s[4];
 }
 
@@ -35,7 +35,7 @@ const string StemGroup::_get_elem(int i) const
 StemGroup::StemGroup(const char *s1, const char *s2, const char *s3, const char *s4):
                     s1(s1), s2(s2), s3(s3), s4(s4) {};
 
-DictionaryKey::DictionaryKey(const char *s1, const char *s2, const char *s3, const char *s4, const PartOfSpeech part_of_speech,
+DictionaryKey::DictionaryKey(const char *s1, const char *s2, const char *s3, const char *s4, const int part_of_speech,
               const DictData *data, const DictionaryLemma *lemma):
                    stems(s1, s2, s3, s4),
                    part_of_speech(part_of_speech),
@@ -148,7 +148,7 @@ const DictionaryKeyPtrView DictionaryKeyPtrView::_get_sub_to_end_array(int start
 
 
 DictionaryLemma::DictionaryLemma(
-        PartOfSpeech part_of_speech,
+        int part_of_speech,
         const char *translation_metadata,
         const char *definition, const char *html_data,
         int index, const DictionaryKey *keys, int keys_ct):
@@ -181,33 +181,28 @@ static const unsigned int hash_string(const string &str)
     return hash; // this hash should always have a 0 in the first bit
 }
 
-/*
-This one will use a static table
-static const DictionaryLemma *LEMMATA;
-static const DictionaryKey *KEYS;
-static const DictionaryLemma *KEY_VECTOR_TABLE;
-static const HashTable *lookup_table[MAX_PartOfSpeech][4];
-*/
-
 HashTableCell::HashTableCell(const DictionaryKey **keys, const unsigned short ct_keys, const unsigned int hash):
     keys(keys), ct_keys(ct_keys), hash(hash) {};
 
 const HashTableCell *HashTable::get_cell(const string &s) const {
     unsigned int hash = hash_string(s);
     int index = hash & ((1 << this->len_log2) - 1);
-    while(this->cells[index].ct_keys != 0) {
-        if(this->cells[index].hash == hash) {
-            if(this->cells[index].keys[0]->stems._get_cstr(key_string_index) == s)
-                return &this->cells[index];
+    while(1) {
+        const HashTableCell *cell = &this->blocks[index >> MAX_BLOCK_SIZE_EXP].cells[index & (MAX_BLOCK_SIZE - 1)];
+        if (cell->ct_keys == 0)
+            break;
+        if(cell->hash == hash) {
+            if(cell->keys[0]->stems._get_cstr(key_string_index) == s)
+                return cell;
         }
 
         index = (index + 1) & ((1 << this->len_log2) - 1);
     }
     return NULL;
 }
-HashTable::HashTable(const HashTableCell *cells, const unsigned long len_log2, const int key_string_index):
-    cells(cells), len_log2(len_log2), key_string_index(key_string_index) {};
-HashTable::HashTable(): cells(NULL), len_log2(0), key_string_index(0) {};
+HashTable::HashTable(const HashTableBlock *blocks, const unsigned long len_log2, const int key_string_index):
+    blocks(blocks), len_log2(len_log2), key_string_index(key_string_index) {};
+HashTable::HashTable(): blocks(NULL), len_log2(0), key_string_index(0) {};
 
 bool HashTable::has(const string &s) const {
     return this->get_cell(s) != NULL;
@@ -215,8 +210,7 @@ bool HashTable::has(const string &s) const {
 const DictionaryKeyPtrView HashTable::get(const string &s) const {
     const HashTableCell *cell = this->get_cell(s);
     if(cell == NULL) {
-        cerr << "CALLED GET ON NONEXISTANT STEM"<<endl;
-        abort();
+        return DictionaryKeyPtrView(NULL, 0);
     }
     return DictionaryKeyPtrView(cell->keys, (unsigned int)(cell->ct_keys));
 }
@@ -227,10 +221,7 @@ BakedDictionaryStemCollection::BakedDictionaryStemCollection(const HashTable (&l
 const HashTable *BakedDictionaryStemCollection::get_hashtable_for(int pos, int stem_key) const
 {
     if(stem_key < 1 || stem_key > 4)
-    {
-        cerr<<"STEM KEY MUST BE IN {1, 2, 3, 4}"<<endl;
-        abort();
-    }
+        return NULL;
     return &this->lookup_table[pos][stem_key-1];
 }
 
@@ -240,4 +231,3 @@ const void BakedDictionaryStemCollection::load (const string &path) const {
 
 extern const BakedDictionaryStemCollection BAKED_WW;
 extern const BakedDictionaryStemCollection BAKED_JOINED;
-
