@@ -188,7 +188,7 @@ const HashTableCell *HashTable::get_cell(const string &s) const {
     unsigned int hash = hash_string(s);
     int index = hash & ((1 << this->len_log2) - 1);
     while(1) {
-        const HashTableCell *cell = &this->blocks[index >> MAX_BLOCK_SIZE_EXP].cells[index & (MAX_BLOCK_SIZE - 1)];
+        const HashTableCell *cell = &this->blocks[index >> MAX_HASHTABLE_BLOCK_SIZE_EXP].cells[index & (MAX_HASHTABLE_BLOCK_SIZE - 1)];
         if (cell->ct_keys == 0)
             break;
         if(cell->hash == hash) {
@@ -215,8 +215,20 @@ const DictionaryKeyPtrView HashTable::get(const string &s) const {
     return DictionaryKeyPtrView(cell->keys, (unsigned int)(cell->ct_keys));
 }
 
-BakedDictionaryStemCollection::BakedDictionaryStemCollection(const HashTable (&lookup_table)[13][4], const DictionaryLemma *lemma_vec, const int lemma_ct):
-        lookup_table(lookup_table), lemma_vec(lemma_vec), lemma_ct(lemma_ct) { };
+
+const int DictionaryLemmaListView::len() const {
+    return this->lemma_ct;
+}
+const DictionaryLemma *DictionaryLemmaListView::_get_index(int index) const{
+    #ifdef DO_ASSERTS
+    assert(index >= 0 && index < this->lemma_ct);
+    #endif
+    return &this->blocks[index >> MAX_LEMMA_LIST_BLOCK_SIZE_EXP].lemmas[index & (MAX_LEMMA_LIST_BLOCK_SIZE - 1)];;
+}
+
+
+BakedDictionaryStemCollection::BakedDictionaryStemCollection(const HashTable (&lookup_table)[13][4], const DictionaryLemmaListView lemma_vec):
+        lookup_table(lookup_table), lemma_vec(lemma_vec) { };
 
 const HashTable *BakedDictionaryStemCollection::get_hashtable_for(int pos, int stem_key) const
 {

@@ -1938,7 +1938,7 @@ class OldStyle_DICTLINE_Lexicon(PythonDictLexicon):
             last_lemma: Optional[DictionaryLemma] = None
             working_lemma: Optional[DictionaryLemma] = None
             for line in ifile:
-                # if index > 2000:
+                # if index > 1000:
                 #     break
                 # strip out the raw line into its groups
                 __stems = [line[:19].strip(), line[19:2 * 19].strip(), line[2 * 19:3 * 19].strip(),

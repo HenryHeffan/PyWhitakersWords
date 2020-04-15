@@ -237,8 +237,17 @@ print("DONE generated.h and generated.cpp")
 if not SHOULD_BAKE:
     exit(0)
 
-MAX_BLOCK_SIZE_EXP = 13
-MAX_BLOCK_SIZE = 2**MAX_BLOCK_SIZE_EXP
+MAX_HASHTABLE_BLOCK_SIZE_EXP = 14
+MAX_HASHTABLE_BLOCK_SIZE = 2**MAX_HASHTABLE_BLOCK_SIZE_EXP
+
+MAX_LEMMA_LIST_BLOCK_SIZE_EXP = 12
+MAX_LEMMA_LIST_BLOCK_SIZE = 2**MAX_LEMMA_LIST_BLOCK_SIZE_EXP
+
+SOFTMAX_KEY_VEC_SIZE = 2 ** 12
+
+MAX_SMALL_VEC_SIZE = 512
+
+SOFTMAX_KEY_VEC_SIZE = max(SOFTMAX_KEY_VEC_SIZE, MAX_SMALL_VEC_SIZE + 1)
 
 print("DOING BAKING GENERATION")
 
@@ -258,18 +267,23 @@ using namespace std;
 def add_MAX_BLOCK_SIZE(o, done=[False]):
     if not done[0]:
         done[0] = True
-        o.write("const int MAX_BLOCK_SIZE_EXP = {MAX_BLOCK_SIZE_EXP};\nconst int MAX_BLOCK_SIZE = {MAX_BLOCK_SIZE};\n"
-                .format(MAX_BLOCK_SIZE_EXP=MAX_BLOCK_SIZE_EXP, MAX_BLOCK_SIZE=MAX_BLOCK_SIZE))
+        o.write("const int MAX_HASHTABLE_BLOCK_SIZE_EXP = {MAX_HASHTABLE_BLOCK_SIZE_EXP};\n"
+                "const int MAX_HASHTABLE_BLOCK_SIZE = {MAX_HASHTABLE_BLOCK_SIZE};\n"
+                "const int MAX_LEMMA_LIST_BLOCK_SIZE_EXP = {MAX_LEMMA_LIST_BLOCK_SIZE_EXP};\n"
+                "const int MAX_LEMMA_LIST_BLOCK_SIZE = {MAX_LEMMA_LIST_BLOCK_SIZE};\n"
+                .format(
+            MAX_HASHTABLE_BLOCK_SIZE_EXP=MAX_HASHTABLE_BLOCK_SIZE_EXP,
+            MAX_HASHTABLE_BLOCK_SIZE=MAX_HASHTABLE_BLOCK_SIZE,
+            MAX_LEMMA_LIST_BLOCK_SIZE_EXP=MAX_LEMMA_LIST_BLOCK_SIZE_EXP,
+            MAX_LEMMA_LIST_BLOCK_SIZE=MAX_LEMMA_LIST_BLOCK_SIZE
+        ))
 
 # NOW WE GENERATE THE STATIC HASH TABLES
 
 def add_baked_dictionary(d, name):
-    b_cpp_keys = open(OPATH + "baked_keys_{}.cpp".format(name.lower()), "w")
-    b_cpp_lemmas = open(OPATH + "baked_lemmas_{}.cpp".format(name.lower()), "w")
-
-    b_cpp_keys.write('\n#include "baked.h"\n')
-    add_MAX_BLOCK_SIZE(b_cpp_keys)
-    b_cpp_lemmas.write('\n#include "baked.h"\n')
+    b_cpp_pos_types = open(OPATH + "baked_pos_types_{}.cpp".format(name.lower()), "w")
+    b_cpp_pos_types.write('\n#include "baked.h"\n')
+    add_MAX_BLOCK_SIZE(b_cpp_pos_types)
 
     POS_DATA_MP = {pos: [] for pos in PartOfSpeech}
     for key in d.dictionary_keys:
@@ -303,59 +317,97 @@ def add_baked_dictionary(d, name):
             + ")"
             for elem in DONE
         ]
-        b_cpp_keys.write("const " + DONE[0].__class__.__name__ + " " + name.upper() +
-                    "_" + pos.name + "_ARRAY[" + str(len(STRS)) + "] = {" + (",\n".join(STRS)) + "};\n")
+        array_type = DONE[0].__class__.__name__
+        array_name = name.upper() + "_" + pos.name + "_ARRAY"
+        b_h.write("extern const " + array_type + " " + array_name + "[" + str(len(STRS)) + "];\n")
+        b_cpp_pos_types.write("const " + array_type + " " + array_name + "[" + str(len(STRS)) + "] = {" + (",\n".join(STRS)) + "};\n")
 
 
-    LEMMATA = []
-    TRUE_KEYS = []
-    i_keys = 0
-    for i_lemmata, l in enumerate(d.dictionary_lemmata):
-        vector_index = i_keys
-        for k in l.dictionary_keys:
-            TRUE_KEYS.append(
-                """DictionaryKey("{s1}", "{s2}", "{s3}", "{s4}", {part_of_speech}, {dict_data}, {lemma_ptr})""".format(
-                    part_of_speech=int(k.part_of_speech),
-                    s1=k.stems[0] if k.stems[0] is not None else "zzz",
-                    s2=k.stems[1] if k.stems[1] is not None else "zzz",
-                    s3=k.stems[2] if k.stems[2] is not None else "zzz",
-                    s4=k.stems[3] if k.stems[3] is not None else "zzz",
-                    dict_data="&" +  name.upper() + "_" + k.part_of_speech.name+"_ARRAY[" + str(k.pos_data.array_index) + "]",
-                    lemma_ptr="&" + name.upper()+"_LEMMATA["+str(i_lemmata)+"]",
+    # First we will figure out the indeces and add the lemmas and keys into arrays
+    LEMMATA = [[]]
+    TRUE_KEYS = [[]]
+    for i_lemmata, lemma in enumerate(d.dictionary_lemmata):
+        # print("LEN LEM[-1]: ",len(LEMMATA[-1]), MAX_LEMMA_LIST_BLOCK_SIZE)
+        if(len(LEMMATA[-1]) >= MAX_LEMMA_LIST_BLOCK_SIZE):  # TODO CHANGE WHEN ADD LEMMA BLOCKS
+            # print("NEW LEMMA BLOCK")
+            LEMMATA.append([])
+
+        LEMMATA[-1].append(lemma)
+        lemma.ref_str = "{}_LEMMATA_{}[{}]".format(name.upper(), len(LEMMATA) - 1, len(LEMMATA[-1]) - 1)
+
+        if(len(TRUE_KEYS[-1]) > SOFTMAX_KEY_VEC_SIZE):
+            TRUE_KEYS.append([])
+        for key in lemma.dictionary_keys:
+            TRUE_KEYS[-1].append(key)
+            key.ref_str="{}_KEYS_{}[{}]".format(name.upper(), len(TRUE_KEYS)-1, len(TRUE_KEYS[-1])-1)
+        lemma.key_arr_ref_str=lemma.dictionary_keys[0].ref_str
+
+    for lemma_block_index, lemma_block in enumerate(LEMMATA):  # TODO CHANGE WHEN ADD BLOCKS
+
+        b_cpp_lemmas = open(OPATH + "baked_lemmas_{}_{}.cpp".format(name.lower(), lemma_block_index), "w")
+        b_cpp_lemmas.write('\n#include "baked.h"\n')
+
+        LEMMA_VEC = []
+        for lemma in lemma_block:
+            LEMMA_VEC.append(
+                """DictionaryLemma({part_of_speech}, {translation_metadata}, "{definition}", "{html_data}", {index}, &{keys}, {keys_len})""".format(
+                    part_of_speech=int(lemma.part_of_speech),  # .name,
+                    translation_metadata='"{}{}{}{}{}"'.format(
+                        int(lemma.translation_metadata.age),
+                        lemma.translation_metadata.area,
+                        lemma.translation_metadata.geo,
+                        int(lemma.translation_metadata.frequency),
+                        lemma.translation_metadata.source),
+                    definition=lemma.definition.replace("\"", "\\\""),
+                    html_data=lemma.html_data if lemma.html_data else "",
+                    index=lemma.index,
+                    keys=lemma.key_arr_ref_str,
+                    keys_len=len(lemma.dictionary_keys),
+                    lb="{",
+                    rb="}"
+                )
+            )
+
+        b_h.write(  "extern const DictionaryLemma "+name.upper() + "_LEMMATA_" + str(lemma_block_index)
+                    + "[" + str(len(LEMMA_VEC)) + "];\n")
+        b_cpp_lemmas.write("const DictionaryLemma "+name.upper() + "_LEMMATA_" + str(lemma_block_index)
+                    + "[" + str(len(LEMMA_VEC)) + "] = {" + (",\n".join(LEMMA_VEC)) + "};\n")
+        b_cpp_lemmas.close()
+
+    # NOW PUT THE LIST OF BLOCKS DOWN HERE
+    b_h.write("extern const DictionaryLemmaListBlock " + name.upper() + "_LEMMATA"
+              + "[" + str(len(LEMMATA)) + "];\n")
+    b_cpp_pos_types.write("const DictionaryLemmaListBlock " + name.upper() + "_LEMMATA"
+                       + "[" + str(len(LEMMATA)) + "] = {" + (",\n".join([
+            "DictionaryLemmaListBlock(" + name.upper() + "_LEMMATA_" + str(i) + ")" for i in range(len(LEMMATA))
+        ])) + "};\n")
+    b_cpp_pos_types.close()
+
+    for key_block_index, key_block in enumerate(TRUE_KEYS):
+        b_cpp_keys = open(OPATH + "baked_keys_{}_{}.cpp".format(name.lower(), key_block_index), "w")
+        b_cpp_keys.write('\n#include "baked.h"\n')
+        KEY_VEC = []
+        for key in key_block:
+            KEY_VEC.append(
+                """DictionaryKey("{s1}", "{s2}", "{s3}", "{s4}", {part_of_speech}, {dict_data}, &{lemma_ptr})""".format(
+                    part_of_speech=int(key.part_of_speech),
+                    s1=key.stems[0] if key.stems[0] is not None else "zzz",
+                    s2=key.stems[1] if key.stems[1] is not None else "zzz",
+                    s3=key.stems[2] if key.stems[2] is not None else "zzz",
+                    s4=key.stems[3] if key.stems[3] is not None else "zzz",
+                    dict_data="&" + name.upper() + "_" + key.part_of_speech.name + "_ARRAY[" + str(key.pos_data.array_index) + "]",
+                    lemma_ptr=key.lemma.ref_str,
                     lb="{",
                     rb="}"
                 ))
-            k.array_index = i_keys
-            i_keys+=1
-            k.true_stem = True
-        LEMMATA.append(
-        """DictionaryLemma({part_of_speech}, {translation_metadata}, "{definition}", "{html_data}", {index}, {keys}, {keys_len})""".format(
-            part_of_speech=int(l.part_of_speech), #.name,
-            translation_metadata='"{}{}{}{}{}"'.format(
-                int(l.translation_metadata.age),
-                l.translation_metadata.area,
-                l.translation_metadata.geo,
-                int(l.translation_metadata.frequency),
-                l.translation_metadata.source),
-            definition=l.definition.replace("\"", "\\\""),
-            html_data=l.html_data if l.html_data else "",
-            index=l.index,
-            keys="&{}_KEYS[{}]".format(name.upper(), vector_index),
-            keys_len=len(l.dictionary_keys),
-            # name="LEMMA_" + str(i),
-            lb="{",
-            rb="}"
-        ))
-
-    b_h.write("const extern DictionaryLemma "+name.upper()+
-                "_LEMMATA[" + str(len(LEMMATA)) + "];\n")
-
-    b_cpp_lemmas.write("const DictionaryLemma "+name.upper() + "_LEMMATA[" + str(len(LEMMATA)) + "] = {" + (",\n".join(LEMMATA)) + "};\n")
-
-    b_h.write("const extern DictionaryKey "+name.upper()+
-                "_KEYS[" + str(len(TRUE_KEYS)) + "];\n")
-    b_cpp_keys.write("const DictionaryKey "+name.upper()+
-                "_KEYS[" + str(len(TRUE_KEYS)) + "] = {" + (", \n".join(TRUE_KEYS)) + "};\n")
+        b_h.write("extern const DictionaryKey "+name.upper()+ "_KEYS_" + str(key_block_index) +
+                  "[" + str(len(KEY_VEC))
+                         + "];\n")
+        b_cpp_keys.write("const DictionaryKey "+name.upper()+ "_KEYS_" + str(key_block_index) +
+                         "[" + str(len(KEY_VEC))
+                         + "] = {" + (", \n".join(KEY_VEC)) + "};\n")
+        b_cpp_keys.close()
+    # for key_vec_indx, KEY_VEC in enumerate(TRUE_KEYS):
 
     def hash_string(str):
         hash = 5381
@@ -368,9 +420,12 @@ def add_baked_dictionary(d, name):
     b_cpp_hashmaps.write('\n#include "baked.h"\n')
     b_cpp_hashmaps.close()
 
+    # NOW GENERATE ALL THE HASH TABLES
+    # THE CODE BELOW BREAKS THEM INTO SECTIONS TO MAKE IT WORK MORE EASILY
+
     file_indx = [0]
     def dump_vector(decl, arr, l):
-        if(l < 400):
+        if(l < MAX_SMALL_VEC_SIZE):
             b_cpp_hashmaps = open(OPATH + "baked_hashmaps_{}_small.cpp".format(name.lower()), "a")
         else:
             b_cpp_hashmaps = open(OPATH + "baked_hashmaps_{}_{}.cpp".format(name.lower(), file_indx[0]), "w")
@@ -412,7 +467,7 @@ def add_baked_dictionary(d, name):
             # if len(mp[stem]) > 5:
             #     print("TOO LONG", len(mp[stem]), [i.stems for i in mp[stem]])
             for k in mp[stem]:
-                KEY_PTR_VECTOR.append("&" + name.upper() + "_KEYS[" + str(k.array_index) + "]")
+                KEY_PTR_VECTOR.append("&" + k.ref_str)
                 vector_i += 1
         print(pad_to_len(mp_key[0].name[:6], 6),mp_key[1], "  ", mb, "\t", badness, "\t", str(badness / len(mp) if len(mp) > 0 else badness)[:5],
               "\t", len(HASH_LIST), len(mp) / len(HASH_LIST))
@@ -436,9 +491,9 @@ def add_baked_dictionary(d, name):
                           ) for e in HASH_LIST]
 
         import math
-        BLOCK_CT = math.ceil(len(HASH_LIST_STRS) / MAX_BLOCK_SIZE)
+        BLOCK_CT = math.ceil(len(HASH_LIST_STRS) / MAX_HASHTABLE_BLOCK_SIZE)
         for block_indx in range(BLOCK_CT):
-            SLICE = HASH_LIST_STRS[block_indx * MAX_BLOCK_SIZE : min((block_indx + 1) * MAX_BLOCK_SIZE, len(HASH_LIST_STRS))]
+            SLICE = HASH_LIST_STRS[block_indx * MAX_HASHTABLE_BLOCK_SIZE : min((block_indx + 1) * MAX_HASHTABLE_BLOCK_SIZE, len(HASH_LIST_STRS))]
             hashmap_name = name.upper() + "_" + mp_key[0].name + "_" + str(mp_key[1]) + "_HASH_TABLE_" + str(block_indx)
             dump_vector(
                 "const HashTableCell " + hashmap_name  + "[" + str(len(SLICE)) + "]",
@@ -470,15 +525,14 @@ def add_baked_dictionary(d, name):
         ])) + "}"
     for pos in PartOfSpeech])) + "};\n")
 
-    b_cpp_hashmaps.write("const BakedDictionaryStemCollection BAKED_" + name.upper() + " = BakedDictionaryStemCollection({tables}, {lemmas}, {ct});\n".format(
+    b_cpp_hashmaps.write("const BakedDictionaryStemCollection BAKED_" + name.upper() + " = BakedDictionaryStemCollection({tables}, {lemmas});\n".format(
         tables = name.upper()+ "_HASHTABLES",
-        lemmas = name.upper()+ "_LEMMATA",
-        ct = len(LEMMATA)
+        lemmas = "DictionaryLemmaListView(" + name.upper()+ "_LEMMATA," + str(sum(len(block) for block in LEMMATA)) + ")"
     ))
 
     b_cpp_hashmaps.close()
     b_cpp_lemmas.close()
-    b_cpp_keys.close()
+    # b_cpp_keys.close()
 
 
 from core_files.whitakers_words import init

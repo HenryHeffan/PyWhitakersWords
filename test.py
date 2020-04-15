@@ -10,13 +10,13 @@ def run():
     J_LEX, J_FORM = jd.init(PATH)
     WW_LEX, WW_FORM = ww.init(PATH)
 
-    for word in ["fato", "prougus", "hi", "a", "qui", "quicumque", "quibus", "praecanto", ""] + \
+    for word in ["abacus", "abacti", "abbatissa", "abbatizo", "fato", "prougus", "hi", "a", "qui", "quicumque", "quibus", "praecanto", ""] + \
                 ("arma virumque cano troiai qui primus ab oris italiam fato prougus et litora livina"
                  " multi quoque passus et multa bello iamque dum".split(" ")):
         J_FORM.display_entry_query(get_matches(J_LEX, word))
         WW_FORM.display_entry_query(get_matches(WW_LEX, word))
 
-    print(WW_FORM.display_entry_query(get_matches(WW_LEX, "qui")))
-    assert(len(get_matches(WW_LEX, "qui").unsyncopated_form_groups) >= 1)
+    print(WW_FORM.display_entry_query(get_matches(WW_LEX, "abbatizo")))
+    assert(len(get_matches(WW_LEX, "abbatizo").unsyncopated_form_groups) >= 1)
 
 run()

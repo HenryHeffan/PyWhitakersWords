@@ -126,8 +126,11 @@ public:
 // Compiling really large files is hard on my computer, and doesnt work on my server. Therefore we break the large
 // arrays into blocks. Baking them into the executable gets around the memory speed limits on my server, which allows
  // the program to load much faster
-extern const int MAX_BLOCK_SIZE_EXP;
-extern const int MAX_BLOCK_SIZE;
+extern const int MAX_HASHTABLE_BLOCK_SIZE_EXP;
+extern const int MAX_HASHTABLE_BLOCK_SIZE;
+
+extern const int MAX_LEMMA_LIST_BLOCK_SIZE_EXP;
+extern const int MAX_LEMMA_LIST_BLOCK_SIZE;
 
 class HashTable {
 private:
@@ -144,13 +147,29 @@ public:
     const DictionaryKeyPtrView get(const string &s) const;
 };
 
+
+class DictionaryLemmaListBlock {
+public:
+    const DictionaryLemma *lemmas;
+    DictionaryLemmaListBlock(const DictionaryLemma *lemmas): lemmas(lemmas) {};
+};
+
+class DictionaryLemmaListView {
+private:
+    const DictionaryLemmaListBlock *blocks;
+    const int lemma_ct;
+public:
+    DictionaryLemmaListView(const DictionaryLemmaListBlock *blocks, const int lemma_ct): blocks(blocks), lemma_ct(lemma_ct) {};
+    const int len() const;
+    const DictionaryLemma *_get_index(int index) const;
+};
+
 class BakedDictionaryStemCollection {
 private:
     const HashTable lookup_table[13][4]; // const HashTable lookup_table[MAX_PartOfSpeech][4];
-    const DictionaryLemma *lemma_vec;
-    const int lemma_ct;
+    const DictionaryLemmaListView lemma_vec;
 public:
-    BakedDictionaryStemCollection(const HashTable (&lookup_table)[13][4], const DictionaryLemma *lemma_vec, const int lemma_ct);
+    BakedDictionaryStemCollection(const HashTable (&lookup_table)[13][4], const DictionaryLemmaListView lemma_vec);
 
     const HashTable *get_hashtable_for(int pos, int stem_key) const;
     const void load (const string &path) const;
