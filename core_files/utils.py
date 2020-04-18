@@ -1,6 +1,6 @@
 # - *- coding: utf- 8 - *-
 try: # this allow both python3 and python2 support
-    from typing import Optional, Tuple, Dict, List, Any, Type, Generator, NewType, Union
+    from typing import Optional, Tuple, Dict, List, Any, Type, Generator, NewType, Union, Callable
     from abc import abstractmethod, ABC
     StemGroup = Tuple[Optional[str], Optional[str], Optional[str], Optional[str]]
 except ImportError:

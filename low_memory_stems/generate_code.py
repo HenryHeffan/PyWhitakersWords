@@ -280,7 +280,7 @@ def add_MAX_BLOCK_SIZE(o, done=[False]):
 
 # NOW WE GENERATE THE STATIC HASH TABLES
 
-def add_baked_dictionary(d, name):
+def add_baked_dictionary(d, name, baked_dict_index):
     b_cpp_pos_types = open(OPATH + "baked_pos_types_{}.cpp".format(name.lower()), "w")
     b_cpp_pos_types.write('\n#include "baked.h"\n')
     add_MAX_BLOCK_SIZE(b_cpp_pos_types)
@@ -350,7 +350,7 @@ def add_baked_dictionary(d, name):
         LEMMA_VEC = []
         for lemma in lemma_block:
             LEMMA_VEC.append(
-                """DictionaryLemma({part_of_speech}, {translation_metadata}, "{definition}", "{html_data}", {index}, &{keys}, {keys_len})""".format(
+                """DictionaryLemma({part_of_speech}, {translation_metadata}, "{definition}", "{html_data}", {index}, &{keys}, {keys_len}, {baked_dict_index})""".format(
                     part_of_speech=int(lemma.part_of_speech),  # .name,
                     translation_metadata='"{}{}{}{}{}"'.format(
                         int(lemma.translation_metadata.age),
@@ -363,6 +363,7 @@ def add_baked_dictionary(d, name):
                     index=lemma.index,
                     keys=lemma.key_arr_ref_str,
                     keys_len=len(lemma.dictionary_keys),
+                    baked_dict_index=baked_dict_index,
                     lb="{",
                     rb="}"
                 )
@@ -525,23 +526,24 @@ def add_baked_dictionary(d, name):
         ])) + "}"
     for pos in PartOfSpeech])) + "};\n")
 
-    b_cpp_hashmaps.write("const BakedDictionaryStemCollection BAKED_" + name.upper() + " = BakedDictionaryStemCollection({tables}, {lemmas});\n".format(
+    b_cpp_hashmaps.write("const BakedDictionaryStemCollection BAKED_" + name.upper() + " = BakedDictionaryStemCollection({tables}, {lemmas}, {baked_dict_index});\n".format(
         tables = name.upper()+ "_HASHTABLES",
-        lemmas = "DictionaryLemmaListView(" + name.upper()+ "_LEMMATA," + str(sum(len(block) for block in LEMMATA)) + ")"
+        lemmas = "DictionaryLemmaListView(" + name.upper()+ "_LEMMATA," + str(sum(len(block) for block in LEMMATA)) + ")",
+        baked_dict_index=baked_dict_index
     ))
 
     b_cpp_hashmaps.close()
-    b_cpp_lemmas.close()
+    # b_cpp_lemmas.close()
     # b_cpp_keys.close()
 
 
 from core_files.whitakers_words import init
 ww, _ = init(PATH, fast=False)
-add_baked_dictionary(ww, "WW")
+add_baked_dictionary(ww, "WW", 0)
 
 from core_files.joined_formater_html import init
 joined, _ = init(PATH, fast=False)
-add_baked_dictionary(joined, "JOINED")
+add_baked_dictionary(joined, "JOINED", 1)
 
 b_h.write("""
 #endif

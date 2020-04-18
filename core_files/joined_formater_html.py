@@ -178,27 +178,6 @@ class FormaterBase:
     def sort_infls_key(self, infl: InflectionRule):
         return 0
 
-    def format_infl_metadata(self, metadata: Tuple[InflectionAge, InflectionFrequency]) -> str:
-        age, freq = metadata
-        age_str = {InflectionAge.Always: "",
-                   InflectionAge.Archaic: "  Archaic ",
-                   InflectionAge.Early: "  Early   ",
-                   InflectionAge.Classic: "  Classic ",
-                   InflectionAge.Late: "  Late    ",
-                   InflectionAge.Later: "  Later   ",
-                   InflectionAge.Medieval: "  Medieval",
-                   InflectionAge.Scholar: "  Scholar ",
-                   InflectionAge.Modern: "  Modern  "}[age]
-        freq_str = {InflectionFrequency.X: "",
-                    InflectionFrequency.A: "",
-                    InflectionFrequency.B: "",
-                    InflectionFrequency.C: "  uncommon",
-                    InflectionFrequency.D: "  infreq  ",
-                    InflectionFrequency.E: "  rare    ",
-                    InflectionFrequency.F: "  veryrare",
-                    InflectionFrequency.I: "  inscript", }[freq]
-        return age_str + freq_str
-
     def dic_metadata_frequency(self, dic: DictionaryLemma):
         return {
             DictionaryFrequency.A: "",
@@ -211,6 +190,7 @@ class FormaterBase:
             DictionaryFrequency.I: "  inscript",
             DictionaryFrequency.X: "",
         }[dic.translation_metadata.frequency]
+
     def dic_metadata_age(self, dic: DictionaryLemma) -> str:
         return {
             DictionaryAge.Always: "  ",
@@ -224,24 +204,12 @@ class FormaterBase:
             DictionaryAge.Modern: "    Modern"
         }[dic.translation_metadata.age]
 
-    # def format_group(self, dic: DictionaryKey, infls: List[InflectionRule], word: str) -> Tuple[str, str, str]:
-    #     before = "\n".join(
-    #         [pad_to_len(self.infl_entry_line(dic, infl, word), 56) + self.format_infl_metadata(infl.metadata)
-    #          for infl in sorted(infls, key=self.sort_infls_key)])
-    #     cannon = self.dic_entry_line(dic) + "\n"  # cannon_form
-    #     defen = "\n".join([l[:79] if len(l) >= 79 else l for l in dic.definition.lines])
-    #     return before, cannon, defen
-
     def make_infl_row_str(self, dic: DictionaryKey, infl: InflectionRule, is_syncopy: bool) -> str:
         return self.infl_entry_line(dic, infl, "") + ("" if not is_syncopy else " (syncopated)")
 
     @abstractmethod
     def infl_entry_line(self, dic: DictionaryKey, infl: InflectionRule, word: str) -> str:
         pass
-
-    # @abstractmethod
-    # def dic_entry_line(self, dic: DictionaryKey) -> str:
-    #     pass
 
     @abstractmethod
     def make_cannon_form_str(self, dic: DictionaryKey) -> str:
@@ -266,8 +234,6 @@ class NounFormater(FormaterBase):
         return self.SORT_ORDER.index(infl.noun_data.case) + 10 * infl.noun_data.number
 
     def setup(self) -> None:
-        import itertools
-        # called once on each class. Use to setup noun formating rules
         for decl, decl_var in ALL_DECL_VAR_PAIRS:
             for gender in Gender:
                 nom = self.lex.get_noun_inflection_rule(decl, decl_var, gender, Case.Nominative, Number.Singular)
@@ -301,24 +267,9 @@ class NounFormater(FormaterBase):
             gender=Gender.alt_str_val(combine_gender(infl.noun_data.gender, dic.noun_data.gender))
         )
 
-    # def dic_entry_line(self, dic: DictionaryKey) -> str:
-    #     decl = {1: "(1st decl.) ", 2: "(2nd decl.) ", 3: "(3rd decl.) ", 4: "(4th decl.) ", 5: "(5th decl.) ", 9: ""}[dic.noun_data.declention]
-    #     # if dic.noun_data.declention == 3 and dic.noun_data.declention_variant not in {1, 2, 3, 4}:
-    #     #     decl = ""
-    #     if dic.noun_data.declention_variant > 5:
-    #         decl = ""
-    #     return "{cannon_form}  N {decl}{gender}   {metadata}".format(
-    #         cannon_form=self.make_cannon_form_str(dic),
-    #         decl=decl,
-    #         gender=Gender.str_val(dic.noun_data.gender).upper(),
-    #         metadata=self.format_dic_metadata(dic.translation_metadata)
-    #     )
-
     def get_extra_info_spot(self, dic: DictionaryKey) -> str:
         decl = {1: "(1st decl.) ", 2: "(2nd decl.) ", 3: "(3rd decl.) ", 4: "(4th decl.) ", 5: "(5th decl.) ", 9: ""}[
             dic.noun_data.declention]
-        # if dic.noun_data.declention == 3 and dic.noun_data.declention_variant not in {1, 2, 3, 4}:
-        #     decl = ""
         if dic.noun_data.declention_variant > 5:
             decl += " greek"
         return decl
@@ -336,39 +287,38 @@ class PronounFormater(FormaterBase):
         return self.SORT_ORDER.index(infl.pronoun_data.case) + 10 * infl.pronoun_data.number
 
     def setup(self) -> None:
-        # for Pronoun: nom, gen
         for (decl, decl_var) in ALL_DECL_VAR_PAIRS:
             self.inflection_table[(decl, decl_var)] = \
-                [self.lex.get_pronoun_inflection_rule(decl, decl_var, gender, Case.Nominative, Number.Singular)
+                [(self.lex.get_pronoun_inflection_rule(decl, decl_var, gender, Case.Nominative, Number.Singular),
+                  self.lex.get_pronoun_inflection_rule(decl, decl_var, gender, Case.Genative, Number.Singular))
                  for gender in Gender.MFN()]
 
     def make_cannon_form_str(self, dic: DictionaryKey) -> str:
-        # print(dic.part_of_speech)
         infls = self.inflection_table[self.get_key(dic)]
-        if (dic.pronoun_data.declention, dic.pronoun_data.declention_variant) in {(3, 1), (4, 1), (6, 1)}:
+        if (dic.pronoun_data.declention, dic.pronoun_data.declention_variant) in {(1,0), (3, 1), (3, 2), (4, 1), (4, 2), (6, 1), (6, 2)}:
             return "{}, {}, {}".format(
-                dic.make_form(infls[0], default="-"),
-                dic.make_form(infls[1], default="-"),
-                dic.make_form(infls[2], default="-"))
+                dic.make_form(infls[0][0], default="-"),
+                dic.make_form(infls[1][0], default="-"),
+                dic.make_form(infls[2][0], default="-"))
         else:
-            return ""
+
+            # --  Ex: ego mei    =>       ego   m
+            # --  Ex: tu tui    =>        tu   t
+            # --  Ex: tui       =>        zzz  t      reflexive
+            # --  Ex: nos nostrum       =>  n nostr
+            # --  Ex: sui       =>        zzz  s      reflexive
+
+            return "{}, {}".format(
+                dic.make_form(infls[0][0], default="-"),
+                dic.make_form(infls[0][1], default="-"))
+
 
     def infl_entry_line(self, dic: DictionaryKey, infl: InflectionRule, word: str) -> str:
-        # h.ic                 PRON   3 1 NOM S M
         return "pronoun {case} {number} {gender}".format(
             case=Case.str_val(infl.pronoun_data.case).lower(),
             number=Number.alt_str_val(infl.pronoun_data.number),
             gender=Gender.alt_str_val(infl.pronoun_data.gender)
         )
-
-    # def dic_entry_line(self, dic: DictionaryKey) -> str:
-    #     # hic, haec, hoc  PRON   [XXXAX]
-    #     cannon_form = self.make_cannon_form_str(dic)
-    #     return "{cannon_form}{pos} {metadata}".format(
-    #         cannon_form=cannon_form,
-    #         pos="" if cannon_form == "" else "  PRON  ",
-    #         metadata=self.format_dic_metadata(dic.translation_metadata)
-    #     )
 
     def get_extra_info_spot(self, dic: DictionaryKey) -> str:
         return ""
@@ -383,8 +333,6 @@ class VerbFormater(FormaterBase):
             dic.verb_data.verb_kind)
 
     def setup(self) -> None:
-        pass
-        # for Verb:
         for (conj, conj_var) in ALL_CONJ_VAR_PAIRS:
             for vk in VerbKind:
                 if vk == VerbKind.X:
@@ -446,7 +394,6 @@ class VerbFormater(FormaterBase):
                     self.inflection_table[(conj, conj_var, vk)] = [pp1, pp2, pp4]
                 else:
                     continue
-                # raise ValueError()
 
     def make_cannon_form_str(self, dic: DictionaryKey) -> str:
         infls = self.inflection_table[self.get_key(dic)]
@@ -483,10 +430,6 @@ class VerbFormater(FormaterBase):
             raise ValueError()
 
     def infl_entry_line_verb(self, dic: DictionaryKey, infl: InflectionRule, word: str) -> str:
-        # conj = dic.verb_data.conjugation
-        # conj_var = dic.verb_data.conjugation_variant
-        # if (conj, conj_var) == (3, 4):
-        #     conj, conj_var = ConjugationType(4), ConjugationSubtype(1)
         return "verb {tense} {voice} {mood} {person} {number}".format(
             tense=Tense.str_val(infl.verb_data.tense).lower(),
             voice=Voice.alt_str_val(infl.verb_data.voice) if dic.verb_data.verb_kind != VerbKind.Dep else "deponent",
@@ -511,29 +454,6 @@ class VerbFormater(FormaterBase):
             voice=Voice.alt_str_val(infl.participle_entry.voice) if dic.verb_data.verb_kind != VerbKind.Dep else "deponent",
         )
 
-    # def dic_entry_line(self, dic: DictionaryKey) -> str:
-    #     conj_str = ""
-    #     if dic.verb_data.conjugation == 1:
-    #         conj_str = " (1st)"
-    #     elif dic.verb_data.conjugation == 2:
-    #         conj_str = " (2nd)"
-    #     elif dic.verb_data.conjugation == 3 and dic.verb_data.conjugation_variant == 1:
-    #         conj_str = " (3rd)"
-    #     elif dic.verb_data.conjugation == 3 and dic.verb_data.conjugation_variant == 4:
-    #         conj_str = " (4th)"
-    #
-    #     return "{cannon_form}  V{conj_str}{verb_kind}   {metadata}".format(
-    #         cannon_form=self.make_cannon_form_str(dic),
-    #         conj_str=conj_str,
-    #         verb_kind=(" " + dic.verb_data.verb_kind.str_val.upper()) if dic.verb_data.verb_kind in
-    #                                                                      {VerbKind.Trans, VerbKind.Intrans,
-    #                                                                       VerbKind.Dep,
-    #                                                                       VerbKind.Semidep, VerbKind.Impers,
-    #                                                                       VerbKind.Perfdef,
-    #                                                                       VerbKind.Dat, VerbKind.Abl} else "",
-    #         metadata=self.format_dic_metadata(dic.translation_metadata)
-    #     )
-
     def get_extra_info_spot(self, dic: DictionaryKey) -> str:
         conj_str = ""
         if dic.verb_data.conjugation == 1:
@@ -547,14 +467,6 @@ class VerbFormater(FormaterBase):
         return conj_str
 
     def sort_infls_key_verb(self, infl: InflectionRule):
-        # return 0
-        # 	argu.it              V      3 1 PRES ACTIVE  IND 3 S
-        # 	argu.it              V      3 1 PERF ACTIVE  IND 3 S
-
-        #  	carp.ere             V      3 1 PRES ACTIVE  INF 0 X
-        # 	carp.ere             V      3 1 PRES PASSIVE IMP 2 S
-        # 	carp.ere             V      3 1 FUT  PASSIVE IND 2 S
-
         SORT_ORDER_TENSE = [Tense.Present, Tense.Imperfect, Tense.Future, Tense.Perfect, Tense.Pluperfect,
                             Tense.FuturePerfect, Tense.X]
         SORT_ORDER_VOICE = [Voice.Active, Voice.Passive, Voice.X]
@@ -573,20 +485,6 @@ class VerbFormater(FormaterBase):
             return 0
         else:
             return self.SORT_ORDER_VPAR.index(infl.participle_entry.case) + 10 * infl.participle_entry.number
-
-    # def format_group(self, dic: DictionaryKey, infls: List[InflectionRule], word: str) -> Tuple[str, str, str]:
-    #     verbs = [pad_to_len(self.infl_entry_line(dic, infl, word), 56) + self.format_infl_metadata(infl.metadata)
-    #              for infl in sorted(infls, key=self.sort_infls_key_verb) if infl.part_of_speech == PartOfSpeech.Verb]
-    #     vpars = [pad_to_len(self.infl_entry_line(dic, infl, word), 56) + self.format_infl_metadata(infl.metadata)
-    #              for infl in sorted(infls, key=self.sort_infls_key_part) if
-    #              infl.part_of_speech == PartOfSpeech.Participle]
-    #     sups = [pad_to_len(self.infl_entry_line(dic, infl, word), 56) + self.format_infl_metadata(infl.metadata)
-    #             for infl in sorted(infls, key=self.sort_infls_key) if infl.part_of_speech == PartOfSpeech.Supine]
-    #     forms = "\n".join(verbs + vpars + sups)
-    #     cannon = self.dic_entry_line(dic) + "\n"  # cannon_form
-    #     defen = "\n".join([l[:79] if len(l) >= 79 else l for l in dic.definition.lines])
-    #     return forms, cannon, defen
-
 
 # TODO: this one needs work
 class AdjectiveFormater(FormaterBase):
@@ -607,13 +505,10 @@ class AdjectiveFormater(FormaterBase):
 
             self.inflection_table[(decl, decl_var)] = [pos, comp, sup]
         self.inflection_gen_3_1_pos = self.lex.get_adjective_inflection_rule(DeclentionType(3), DeclentionSubtype(1), Gender.X,
-                                                                    Case.Genative, Number.Singular,
-                                                                    AdjectiveKind.Positive)
+                                                                    Case.Genative, Number.Singular, AdjectiveKind.Positive)
 
     def make_cannon_form_str(self, dic: DictionaryKey) -> str:
-        # pos, comp, sup = "", "", ""
         infls = self.inflection_table[self.get_key(dic)]
-        # pos = "{} -{} -{}"
         if dic.stems[2] is None and dic.stems[3] is None:
             # This means that it is either just POS, just COMP, or just SUPER
             # therefore just show all the genders of this word
@@ -683,21 +578,12 @@ class AdjectiveFormater(FormaterBase):
         return self.SORT_ORDER.index(infl.adjective_data.case) + 10 * infl.adjective_data.number
 
     def infl_entry_line(self, dic: DictionaryKey, infl: InflectionRule, word: str) -> str:
-        # grav.i               ADJ    3 2 DAT S X POS
-        # grav.i               ADJ    3 2 ABL S X POS
         return "adj {case} {number} {gender} {adj_kind}".format(
             case=Case.str_val(infl.adjective_data.case).lower(),
             number=Number.alt_str_val(infl.adjective_data.number),
             gender=Gender.alt_str_val(infl.adjective_data.gender),
             adj_kind=AdjectiveKind.str_val(infl.adjective_data.adjective_kind).lower()
         )
-
-    # def dic_entry_line(self, dic: DictionaryKey) -> str:
-    #     # gravis, grave, gravior -or -us, gravissimus -a -um  ADJ   [XXXAX]
-    #     return "{cannon_form}  ADJ   {metadata}".format(
-    #         cannon_form=self.make_cannon_form_str(dic),
-    #         metadata=self.format_dic_metadata(dic.translation_metadata)
-    #     )
 
     def get_extra_info_spot(self, dic: DictionaryKey) -> str:
         return ""
@@ -731,11 +617,6 @@ class AdverbFormater(FormaterBase):
             adj_kind=AdjectiveKind.str_val(infl.adverb_data.adjective_kind_output).lower()
         )
 
-    # def dic_entry_line(self, dic: DictionaryKey) -> str:
-    #     return "{cannon_form}  ADV   {metadata}".format(
-    #         cannon_form=self.make_cannon_form_str(dic),
-    #         metadata=self.format_dic_metadata(dic.translation_metadata)
-    #     )
     def get_extra_info_spot(self, dic: DictionaryKey) -> str:
         return ""
 
@@ -748,18 +629,9 @@ class PrepositionFormater(FormaterBase):
         return dic.make_form(self.inflection_rule)
 
     def infl_entry_line(self, dic: DictionaryKey, infl: InflectionRule, word: str) -> str:
-        # cum                  PREP   ABL
         return "prep w/ {case}".format(
             case=Case.str_val(dic.preposition_data.takes_case).lower()
         )
-
-    # def dic_entry_line(self, dic: DictionaryKey) -> str:
-    #     # cum  PREP  ABL   [XXXAO]
-    #     return "{cannon_form}  PREP  {case}   {metadata}".format(
-    #         cannon_form=self.make_cannon_form_str(dic),
-    #         case=dic.preposition_data.takes_case.str_val.upper(),
-    #         metadata=self.format_dic_metadata(dic.translation_metadata)
-    #     )
 
     def get_extra_info_spot(self, dic: DictionaryKey) -> str:
         return "+ {}".format(Case.str_val(dic.preposition_data.takes_case).lower())
@@ -776,13 +648,6 @@ class ConjunctionFormater(FormaterBase):
         # at                   CONJ
         return "conj"
 
-    # def dic_entry_line(self, dic: DictionaryKey) -> str:
-    #     # at  CONJ   [XXXAO]
-    #     return "{cannon_form}  CONJ   {metadata}".format(
-    #         cannon_form=self.make_cannon_form_str(dic),
-    #         metadata=self.format_dic_metadata(dic.translation_metadata)
-    #     )
-
     def get_extra_info_spot(self, dic: DictionaryKey) -> str:
         return ""
 
@@ -794,15 +659,8 @@ class InterjectionFormater(FormaterBase):
         return dic.make_form(self.inflection_rule)
 
     def infl_entry_line(self, dic: DictionaryKey, infl: InflectionRule, word: str) -> str:
-        # heu                  INTERJ
         return "interj"
 
-    # def dic_entry_line(self, dic: DictionaryKey) -> str:
-    #     # heu  INTERJ   [XXXAX]
-    #     return "{cannon_form}  INTERJ   {metadata}".format(
-    #         cannon_form=self.make_cannon_form_str(dic),
-    #         metadata=self.format_dic_metadata(dic.translation_metadata)
-    #     )
     def get_extra_info_spot(self, dic: DictionaryKey) -> str:
         return ""
 
@@ -847,9 +705,6 @@ class NumberFormater(FormaterBase):
         )
 
     def infl_entry_line(self, dic: DictionaryKey, infl: InflectionRule, word: str) -> str:
-        # un.a                 NUM    1 1 NOM S F CARD
-        # un.a                 NUM    1 1 VOC S F CARD
-        # un.a                 NUM    1 1 ABL S F CARD
         return "num {case} {number} {gender} {num_kind}".format(
             case=Case.str_val(infl.number_data.case).lower(),
             number=Number.alt_str_val(infl.number_data.number),
@@ -857,30 +712,8 @@ class NumberFormater(FormaterBase):
             num_kind=NumberKind.str_val(infl.number_data.number_kind).lower()
         )
 
-    # def dic_entry_line(self, dic: DictionaryKey) -> str:
-    #     # unus -a -um, primus -a -um, singuli -ae -a, semel  NUM   [XXXAX]
-    #     return "{cannon_form}  NUM   {metadata}".format(
-    #         cannon_form=self.make_cannon_form_str(dic),
-    #         metadata=self.format_dic_metadata(dic.translation_metadata)
-    #     )
-
     def get_extra_info_spot(self, dic: DictionaryKey) -> str:
         return ""
-
-    # def format_group(self, dic: DictionaryKey, infls: List[InflectionRule], word: str) -> Tuple[str, str, str]:
-    #     before = "\n".join(
-    #         [pad_to_len(self.infl_entry_line(dic, infl, word), 56) + self.format_infl_metadata(infl.metadata)
-    #          for infl in sorted(infls, key=self.sort_infls_key)])
-    #     cannon = self.dic_entry_line(dic) + "\n"  # cannon_form
-    #     defen = "\n".join([l[:79] if len(l) >= 79 else l for l in dic.definition.lines])
-    #     if all(infl.number_data.number_kind == NumberKind.Ordinal for infl in infls):
-    #         defen = pad_to_len(
-    #             " {number}th - (ORD, 'in series'); (a/the) {number}th (part) (fract w/pars?);                  ".format(
-    #                 number=dic.number_data.numeric_value), 80)
-    #     elif all(infl.number_data.number_kind == NumberKind.Cardinal for infl in infls):
-    #         defen = pad_to_len(" {number} - (CARD answers 'how many');".format(number=dic.number_data.numeric_value),
-    #                            80)
-    #     return before, cannon, defen
 
 
 class PackonFormater(FormaterBase):
@@ -890,6 +723,7 @@ class PackonFormater(FormaterBase):
     SORT_ORDER = [Case.Nominative, Case.Vocative, Case.Genative, Case.Dative, Case.Ablative, Case.Accusitive,
                   Case.Locitive, Case.X]
 
+
     def sort_infls_key(self, infl):
         return self.SORT_ORDER.index(infl.packon_data.case) + 10 * infl.packon_data.number
 
@@ -897,36 +731,40 @@ class PackonFormater(FormaterBase):
         # for Packon: nom, gen
         for (decl, decl_var) in ALL_DECL_VAR_PAIRS:
             self.inflection_table[(decl, decl_var)] = \
-                [self.lex.get_pronoun_inflection_rule(decl, decl_var, gender, Case.Nominative, Number.Singular)
+                [(self.lex.get_pronoun_inflection_rule(decl, decl_var, gender, Case.Nominative, Number.Singular),
+                  self.lex.get_pronoun_inflection_rule(decl, decl_var, gender, Case.Genative, Number.Singular))
                  for gender in Gender.MFN()]
 
+    def make_packon_form(self, dic: DictionaryKey, infl: InflectionRule):
+        form = dic.make_form(infl, default="-")
+        if form == "-":
+            return form
+        form += dic.packon_data.tackon_str
+        return form
+
     def make_cannon_form_str(self, dic: DictionaryKey) -> str:
-        # print(dic.part_of_speech)
         infls = self.inflection_table[self.get_key(dic)]
-        if (dic.packon_data.declention, dic.packon_data.declention_variant) in {(3, 1), (4, 1), (6, 1)}:
+
+        if (dic.pronoun_data.declention, dic.pronoun_data.declention_variant) in {(1, 0), (3, 1), (3, 2), (4, 1),
+                                                                                  (4, 2), (6, 1), (6, 2)}:
             return "{}, {}, {}".format(
-                dic.make_form(infls[0], default="-"),
-                dic.make_form(infls[1], default="-"),
-                dic.make_form(infls[2], default="-"))
+                self.make_packon_form(dic, infls[0][0]),
+                self.make_packon_form(dic, infls[1][0]),
+                self.make_packon_form(dic, infls[2][0]))
+        elif dic.pronoun_data.declention == 5:  # ego, mei
+            return "{}, {}".format(
+                self.make_packon_form(dic, infls[0][0]),
+                self.make_packon_form(dic, infls[0][1]))
         else:
             return ""
 
     def infl_entry_line(self, dic: DictionaryKey, infl: InflectionRule, word: str) -> str:
-        # h.ic                 PRON   3 1 NOM S M
         return "pron {case} {number} {gender}".format(
             case=Case.str_val(infl.packon_data.case).lower(),
             number=Number.alt_str_val(infl.packon_data.number),
             gender=Gender.alt_str_val(infl.packon_data.gender)
         )
 
-    # def dic_entry_line(self, dic: DictionaryKey) -> str:
-    #     # hic, haec, hoc  PRON   [XXXAX]
-    #     cannon_form = self.make_cannon_form_str(dic)
-    #     return "{cannon_form}{pos} {metadata}".format(
-    #         cannon_form=cannon_form,
-    #         pos="" if cannon_form == "" else "  PRON  ",
-    #         metadata=self.format_dic_metadata(dic.translation_metadata)
-    #     )
     def get_extra_info_spot(self, dic: DictionaryKey) -> str:
         return ""
 
@@ -963,18 +801,6 @@ class JoinedFormater(searcher.Formater):
     def dictionary_keyword(self, dic: DictionaryKey) -> str:
         return self.map[dic.part_of_speech].dictionary_key_form(dic)
 
-    # def format_suffix_group(self, form_group: FormGroup, word: str) -> Tuple[str, str, str]:
-    #     assert form_group.suffix is not None
-    #     formater_pos_infl = self.map[form_group.suffix.new_pos]
-    #     formater_pos_stem = self.map[form_group.suffix.stem_pos]
-    #     dic = form_group.suffix.make_fake_dic_key(form_group.dic)
-    #     before = "\n".join([pad_to_len(formater_pos_infl.infl_entry_line(dic, infl, word),
-    #                                    56) + formater_pos_infl.format_infl_metadata(infl.metadata)
-    #                         for infl in sorted(form_group.infls, key=formater_pos_infl.sort_infls_key)])
-    #     cannon = formater_pos_stem.dic_entry_line(form_group.dic) + "\n"  # cannon_form
-    #     defen = "\n".join([l[:79] if len(l) >= 79 else l for l in form_group.dic.definition.lines])
-    #     return before, cannon, defen
-
     def display_entry_query(self, query: EntryQuery) -> str:
         if query.two_words:
             assert query.two_words_query1 is not None
@@ -987,75 +813,6 @@ class JoinedFormater(searcher.Formater):
             )
 
         # first, clean up the FormGroups from the Query to form FormatFormGroups
-
-        # class SyncopyMetadata:
-        #     def __init__(self, word: str, is_syncopy: bool, why: Optional[str]):
-        #         self.word = word
-        #         self.is_syncopy = is_syncopy
-        #         self.why = why
-
-        # class FormatFormGroup:
-        #     def __init__(self,
-        #                  dic: DictionaryKey,
-        #                  infls_is_sync_pairs: List[Tuple[InflectionRule, SyncopyMetadata]],
-        #                  alt_dic: List[DictionaryKey],
-        #                  prefix: Optional[PrefixEntry],
-        #                  suffix: Optional[SuffixEntry],
-        #                  tackon: Optional[TackonEntry]):
-        #         self.dic = dic
-        #         self.infls_is_sync_pairs = infls_is_sync_pairs
-        #         self.alt_dic = alt_dic
-        #         self.prefix = prefix
-        #         self.suffix = suffix
-        #         # not actually dispalyed, except for a note in the metadata.
-        #         # The tackon is shared, and so will have its own row
-        #         self.tackon = tackon
-
-        # format_groups = []
-        #
-        # form_group_map: Dict[str, List[Tuple[FormGroup, bool, str, Optional[str]]]]= {}
-        # for group in query.unsyncopated_form_groups:
-        #     if not str(group.dic) in form_group_map:
-        #         form_group_map[str(group.dic)] = []
-        #     form_group_map[str(group.dic)].append((group, False, query.unsyncopated_word, None))
-        # for group in query.syncopated_form_groups:
-        #     if not str(group.dic) in form_group_map:
-        #         form_group_map[str(group.dic)] = []
-        #     form_group_map[str(group.dic)].append((group, True, query.syncopated_word, query.syncopated_why))
-        #
-        # for key in form_group_map:
-        #     # form_group_map[key].sort(key=lambda x: x[0].dic.index)
-        #     main_group = form_group_map[key][0]
-        #     for form_group in form_group_map[key][1:]:
-        #         assert form_group[0].suffix == main_group[0].suffix and \
-        #                form_group[0].tackon == main_group[0].tackon and \
-        #                form_group[0].prefix == main_group[0].prefix
-        #     infls = []
-        #     for form_group in form_group_map[key]:
-        #         for infl in form_group[0].infls:
-        #             ent = (infl, SyncopyMetadata(form_group[2], form_group[1], query.syncopated_why if form_group[1] else None))
-        #             if not any(i == ent for i in infls):
-        #                 infls.append(ent)
-        #     format_group = FormatFormGroup(main_group[0].dic, infls, [],  # the next step is to join groups which share both the forms and definitions
-        #                                    form_group[0].prefix, form_group[0].suffix, form_group[0].tackon)
-        #     format_groups.append(format_group)
-        #
-        # nls: List[FormatFormGroup] = []
-        # for format_group_pos in format_groups:
-        #     for format_group in nls:
-        #         if format_group.dic.part_of_speech == format_group_pos.dic.part_of_speech and\
-        #                 format_group.dic.definition.lines == format_group_pos.dic.definition.lines and\
-        #                 format_group.infls_is_sync_pairs == format_group_pos.infls_is_sync_pairs and\
-        #                 format_group.tackon == format_group_pos.tackon and\
-        #                 format_group.prefix == format_group_pos.prefix and\
-        #                 format_group.suffix == format_group_pos.suffix:
-        #             format_group.alt_dic.append(format_group_pos.dic)
-        #             break
-        #     else:
-        #         nls.append(format_group_pos)
-        #
-        # # now all groups with shared dictionary and inflections have been changed over to be alternate stems
-        # format_groups = nls
 
         format_groups = query.sync_marked_form_groups()
 
@@ -1074,8 +831,6 @@ class JoinedFormater(searcher.Formater):
                 tackon_meaning=tackon.explination
             ))
 
-        # (lemma, [(key, infl, syncopy_q, word)])
-
         # then output each of the format_groups
         for format_group in format_groups:
             group_id = format_group.lemma.index
@@ -1083,13 +838,12 @@ class JoinedFormater(searcher.Formater):
             if format_group.suffix is None:
                 infl_formater = self.map[format_group.lemma.part_of_speech]
                 dic_formater = self.map[format_group.lemma.part_of_speech]
-                inflectable_dic = format_group.lemma
+                # inflectable_dic = format_group.lemma
             else:
                 infl_formater = self.map[format_group.suffix.new_pos]
                 dic_formater = self.map[format_group.suffix.stem_pos]
-                inflectable_dic = format_group.suffix.make_fake_dic_key(format_group.lemma.dictionary_keys[0])
+                # inflectable_dic = format_group.suffix.make_fake_dic_key(format_group.lemma.dictionary_keys[0])
 
-            # print(hasattr(format_group.lemma, "html_data"), format_group.lemma.__class__)
             cannon_form_rows = [CANNON_MAIN_ROW_TEMP.format(
                 cannon_form_slot=dic_formater.make_cannon_form_str(format_group.lemma.dictionary_keys[0]),
                 cannon_form_suffix=(" +" + format_group.tackon.tackon) if format_group.tackon is not None else "",
@@ -1098,11 +852,8 @@ class JoinedFormater(searcher.Formater):
             )]
             for key in format_group.lemma.dictionary_keys[1:]:
                 cannon_form_rows.append(CANNON_ALT_ROW_TEMP.format(cannon_form_slot=dic_formater.make_cannon_form_str(key)))
-            # [DEFINITION_ROW_TEMP.format(definition_row_slot=line) for line in
             definition_rows = format_group.lemma.definition
 
-            # print(format_group.dic.part_of_speech, [infl.part_of_speech for infl, sync_data in format_group.infls_is_sync_pairs ], format_group.suffix)
-            # print(format_group.suffix, [((key.part_of_speech, key.stems), form.part_of_speech, word, is_sync) for key, form, word, is_sync in format_group.key_infl_pairs])
             form_rows = [FORM_ROW_TEMP.format(
                 form_row_word_slot=form.make_split_word_form(word),
                 form_row_form_slot=infl_formater.make_infl_row_str(
@@ -1110,6 +861,8 @@ class JoinedFormater(searcher.Formater):
                     form,
                     is_sync)
             ) for key, form, word, is_sync in format_group.key_infl_pairs]
+
+            # print(format_group.lemma.dictionary_keys[0].stems, format_group.lemma.html_data)
 
             output.append(WORD_GROUP_TEMP.format(
                 id_slot=group_id,
@@ -1138,10 +891,27 @@ class JoinedFormater(searcher.Formater):
         return "".join(output)
 
 
-def init(path: str, fast: bool = True, decode_func=None) -> Tuple[NewStyle_Json_Lexicon, JoinedFormater]:
-    J_LEX = (BakedLexicon("BAKED_JOINED") if fast else NewStyle_Json_Lexicon("GeneratedFiles/JOINED_ONLY_REF_DEF.txt"))  #"GeneratedFiles/JOINED.txt" if not self.ref_def else
-    J_LEX.load(path)
+def init(path: str, fast: bool = True, load_html_def_dict: bool = False, decode_func=None) -> Tuple[NewStyle_Json_Lexicon, JoinedFormater]:
+    # One of three should be the case
+    # BOTH load_html_def_dict == False and decode_func == None, then do nothing
+    # BOTH load_html_def_dict == True and decode_func == None, then load REF_DEF_TABLE.txt and return decoded from this
+    # BOTH load_html_def_dict == False and decode_func == some function f, then use f to get the html value lazily as needed
+    if load_html_def_dict:
+        assert decode_func is None
+        import json
+        table = {"": ""}
+        with open(os.path.join(path, "GeneratedFiles/REF_DEF_TABLE.txt")) as ifile:
+            for line in ifile:
+                line = line[:-1].split(" ")
+                table[line[0]] = line[1]
+        decode_func = lambda html_data: "\n".join([load_utf_str(table[k]) for k in html_data.split(" ")])
+    elif decode_func is None:
+        decode_func = lambda s: ""
 
+    J_LEX = (BakedLexicon("BAKED_JOINED", decode_func)
+             if fast else
+             NewStyle_Json_Lexicon("GeneratedFiles/JOINED_ONLY_REF_DEF.txt", decode_func))  #"GeneratedFiles/JOINED.txt" if not self.ref_def else
+    J_LEX.load(path)
     formater = JoinedFormater(J_LEX,
                         NounFormater(J_LEX),
                         PronounFormater(J_LEX),
@@ -1155,189 +925,3 @@ def init(path: str, fast: bool = True, decode_func=None) -> Tuple[NewStyle_Json_
                         PackonFormater(J_LEX))
 
     return J_LEX, formater
-
-# init("/home/henry/Desktop/latin_website/PyWhitakersWords/")
-# def set_formater(_formater: Formater) -> None:
-#     global formater
-#     formater = _formater
-
-# def parse(s) -> str:
-#     m = get_matches(J_LEX, s)
-#     # print(m)
-#     return formater.display_entry_query(m)
-#
-#
-# def parse_and_def(s) -> Tuple[str, str]:
-#     m = get_matches(J_LEX, s)
-#
-#     def extract(fgs: List[FormGroup]):
-#         r = []
-#         for fg in fgs:
-#             r.append("\n".join([WW_FORMATER.map[fg.lemma.part_of_speech].dic_entry_line(fg.lemma.dictionary_keys[0])]
-#                                + ["    " + line for line in fg.lemma.definition.split("\n")]))
-#         return r
-#
-#     l = extract(m.unsyncopated_form_groups) + extract(m.syncopated_form_groups) + (
-#         [] if not m.two_words else
-#         extract(m.two_words_query1.unsyncopated_form_groups) + extract(m.two_words_query2.syncopated_form_groups))
-#     # print("\n".join(l))
-#     r = "\n".join(l)
-#     if r != "":
-#         r += "\n"
-#     # print(">>>{}<<<".format(r))
-#     return formater.display_entry_query(m), r
-#
-#
-# def parse_document(filename, encoding="utf-8"):
-#     lines_raw = []
-#     with open(filename, encoding=encoding) as inp:
-#         for line in inp:
-#             lines_raw.append(line.split("--")[0])
-#     lines = []
-#     endings = []
-#     for i in range(150):  # len(l)):
-#         if lines_raw[i].strip() == "":
-#             if i > 0:
-#                 endings[-1] = "\n=>Blank exits =>"
-#         else:
-#             lines.append(lines_raw[i].strip())
-#             endings.append("\n=>")
-#     # print(lines, endings)
-#     for line, ending in zip(lines, endings):
-#         for word in line.split(" "):
-#             word = word.strip()
-#             if word is not "":
-#                 print(parse(word))
-#         print(ending)
-#
-#
-# # parse_document("/home/henry/Desktop/latin_website/QuickLatin/aeneid_bk4.txt")
-# print(parse("qui"))
-
-
-# e                    SUFFIX
-# make of;
-# sature.o             ADJ    1 1 DAT S M POS
-# sature.o             ADJ    1 1 DAT S N POS
-# sature.o             ADJ    1 1 ABL S M POS
-# sature.o             ADJ    1 1 ABL S N POS
-# satura, saturae  N  F   [XXXCX]
-# satire;
-
-
-# print(parse("Uxor"))
-# print(parse("Vxor"))
-# print(parse("eadem"))
-# print(parse("Olidissimis"))
-# print(parse("  die'"))
-#
-#   di.e                 N      2 1 VOC S M
-# 	dius, dii  N (2nd) M   [DEXFS]    Late  veryrare
-# 	god;
-# 	di.e                 N      5 1 GEN S C                   Early
-# 	di.e                 N      5 1 ABL S C
-# 	dies, diei  N (5th) C   [XXXAO]
-# 	day; daylight; (sunlit hours); (24 hours from midnight); open sky; weather;
-# 	specific day; day in question; date of letter; festival; lifetime, age; time;
-# 	di.e                 ADJ    1 1 VOC S M POS
-# 	dius, dia, dium  ADJ   [XEXDO]    lesser
-# 	divine; w/supernatural radiance; divinely inspired; blessed, saint (Latham);
-# 	daylit; charged with brightness of day/daylight;
-# 	e                    SUFFIX
-# 	-ly; -ily;  Converting ADJ to ADV
-# 	di.e                 ADV    POS
-# 	dius, dia, dium  ADJ   [XEXDO]    lesser
-# 	divine; w/supernatural radiance; divinely inspired; blessed, saint (Latham);
-# 	e                    SUFFIX
-# 	di.e                 ADV    POS
-# 	dius, dia, dium  ADJ   [XEXDO]    lesser
-# 	divine; w/supernatural radiance; divinely inspired; blessed, saint (Latham);
-# 	*
-
-# 	Syncope   r => v.r
-# 	Syncopated perfect often drops the 'v' and contracts vowel
-# 	nov.eris             V      3 1 PERF ACTIVE  SUB 2 S
-# 	nov.eris             V      3 1 FUTP ACTIVE  IND 2 S
-# 	nosco, noscere, novi, notus  V (3rd) TRANS   [XXXAO]
-# 	get to know; learn, find out; become cognizant of/acquainted/familiar with;
-# 	examine, study, inspect; try (case); recognize, accept as valid/true; recall;
-# 	nov.eris             V      1 1 PRES PASSIVE SUB 2 S
-# 	novo, novare, novavi, novatus  V (1st)   [XXXDX]    lesser
-# 	make new, renovate; renew, refresh, change;
-# 	nov.eris             V      3 1 PERF ACTIVE  SUB 2 S
-# 	nov.eris             V      3 1 FUTP ACTIVE  IND 2 S
-# 	novi, novisse, notus  V (3rd) PERFDEF   [XXXDX]    lesser
-# 	know, know of; know how, be able (to); experience;  (PERF form, PRES force);
-# 	know; be familiar/acquainted/conversant with/aware of; accept, recognize;
-
-
-# def make_qu_lookup_table(word: str, prefix, suffix, tackon):
-#     # qui, quis, quid, quae, quod
-#     # cuius, cui, quem, quam, quo, qua
-#     # quibus, quorum, quarum, quos, quas
-#     pass
-#
-#     L1 = "who; that; which, what; of which kind/degree; person/thing/time/point that;"
-#     L2 = "who/what/which?, what/which one/man/person/thing? what kind/type of?;"
-#     L3 = "who/whatever, everyone who, all that, anything that;"
-#     L4 = "any; anyone/anything, any such; unspecified some; (after si/sin/sive/ne);"
-#     L5 = "who?, which?, what?; what kind of?;"
-#     L6 = "anyone/anybody/anything; whoever you pick; something (or other); any (NOM S);"
-#
-#     LINES = {1: L1, 2: L2, 3: L3, 4: L4, 5: L5, 6: L6}
-#     MP: Dict[str, List[Tuple[List[Tuple[Case, Number, Gender]], List[int]]]] = {
-#         "qui": [([(Case.Nominative, Number.Plural, Gender.Male)], [1, 2, 3, 4, 5]),
-#                 ([(Case.Nominative, Number.Singular, Gender.Male)], [1, 3, 4, 5])],
-#         "quid": [(
-#                  [(Case.Nominative, Number.Singular, Gender.Nueter), (Case.Accusitive, Number.Singular, Gender.Nueter)],
-#                  [2, 6])],
-#         "quis": [([(Case.Dative, Number.Plural, Gender.X), (Case.Ablative, Number.Plural, Gender.X)], [1, 2, 3, 4, 5]),
-#                  ([(Case.Nominative, Number.Singular, Gender.Common)], [2, 6])],
-#         "quibus": [
-#             ([(Case.Dative, Number.Plural, Gender.X), (Case.Ablative, Number.Plural, Gender.X)], [1, 2, 3, 4, 5])],
-#         "quae": [([(Case.Nominative, Number.Plural, Gender.Female)], [1, 2, 3, 4, 5]),
-#                  ([(Case.Nominative, Number.Singular, Gender.Female)], [1, 6, 3, 4, 5]),
-#                  ([(Case.Nominative, Number.Plural, Gender.Nueter), (Case.Accusitive, Number.Plural, Gender.Nueter)],
-#                   [6, 4])],
-#         "quod": [(
-#                  [(Case.Nominative, Number.Singular, Gender.Nueter), (Case.Accusitive, Number.Singular, Gender.Nueter)],
-#                  [1, 3, 4, 5])],
-#         "quem": [([(Case.Accusitive, Number.Singular, Gender.Male)], [1, 2, 3, 4, 5])],
-#         "quos": [([(Case.Accusitive, Number.Plural, Gender.Male)], [1, 2, 3, 4, 5])],
-#         "quas": [([(Case.Accusitive, Number.Plural, Gender.Female)], [1, 2, 3, 4, 5])],
-#         "quam": [([(Case.Accusitive, Number.Singular, Gender.Female)], [1, 2, 3, 4, 5])],
-#         "quo": [([(Case.Ablative, Number.Singular, Gender.Male), (Case.Ablative, Number.Singular, Gender.Nueter)],
-#                  [1, 2, 3, 4, 5])],
-#         "qua": [([(Case.Nominative, Number.Singular, Gender.Female), (Case.Ablative, Number.Singular, Gender.Female)],
-#                  [6, 4]),
-#                 ([(Case.Ablative, Number.Singular, Gender.Female)], [1, 6, 3, 4, 5]),
-#                 ([(Case.Nominative, Number.Plural, Gender.Nueter), (Case.Accusitive, Number.Plural, Gender.Nueter)],
-#                  [1, 2, 3, 4, 5])],
-#         "quorum": [([(Case.Genative, Number.Plural, Gender.Male), (Case.Genative, Number.Plural, Gender.Nueter)],
-#                     [1, 2, 3, 4, 5])],
-#         "quarum": [([(Case.Genative, Number.Plural, Gender.Female)], [1, 2, 3, 4, 5])],
-#         "cujus": [([(Case.Genative, Number.Singular, Gender.X)], [1, 2, 3, 4, 5])],
-#         "cui": [([(Case.Dative, Number.Singular, Gender.X)], [1, 2, 3, 4, 5])],
-#     }
-#
-#     pairs: List[Tuple[List[Tuple[Case, Number, Gender]], List[int]]] = MP[word.lower()]
-#     form_groups = []
-#     for pair in pairs:
-#         keys, lines = pair
-#         lines = [LINES[i] for i in lines]
-#         dic = DictionaryKey(("qu", "cu", None, None),
-#                               PartOfSpeech.Pronoun,
-#                               PronounDictData(DeclentionType(1), DeclentionSubtype(0), PronounKind.X),
-#                               TranslationMetadata("X X X A O"),
-#                               Definiton(lines),
-#                               -1)
-#         infls = [InflectionRule(PartOfSpeech.Pronoun,
-#                                  PronounInflData(DeclentionType(1), DeclentionSubtype(0), key[0], key[1], key[2]),
-#                                  1 if word.lower()[0] == "q" else 2,
-#                                  word[2:],
-#                                  InflectionAge.Always,
-#                                  InflectionFrequency.A)
-#                  for key in keys]
-#         form_group = FormGroup(dic, infls, prefix, suffix, tackon)
-#         form_groups.append(form_group)
-#     return form_groups

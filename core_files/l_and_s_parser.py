@@ -198,9 +198,9 @@ def parse_entry(ent) -> Optional['Entry']:
     whole_line = re.sub(r" ?\([^)]*\)|\^", "", whole_line)[:200]
     # print(whole_line)
 
-    m = re.match("(\S*(, \S+)? (or|and) )+(\S*,.*)", whole_line)
+    m = re.match("(\S*)(\S*(, \S+)? (or|and) )+(\S*),(.*)", whole_line)
     if m is not None:  # TODO fix hack
-        whole_line = m.group(4)
+        whole_line = m.group(1) + "," + m.group(6)
 
     PATTERN_NOUN_GEN_INDX = 12
     PATTERN_NOUN = r"†? ?((\S*( -(\S*))?){a}) ?[,.] ({b})(([,.](.+,)?)|( .*,))\W?( ?patr(on)?\.)? ({c})(\W| )"

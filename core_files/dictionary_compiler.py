@@ -250,8 +250,57 @@ with open(os.path.join(PATH, "GeneratedFiles/DICTLINE_CPP_FAST.txt"), "w") as o:
 # with open(PATH + "/GeneratedFiles/JOINED_HEADERS.txt", "w", encoding='utf-8') as o:
 #     json.dump([n.store(header=True) for n in ND], o, indent=1)
 
+# TODO MAKE THESE CONNECTIONS
+#  WW      L&S
+#  noster binding wrong word
+#  qu words
+#  -que, -ve, -ne, etc.
+#  Cupido & cupido CAPITAL LETTERS CAUSE BINDING ISSUES
+#  ALSO STEM ADDITION HAS CAPITAL LETTER ISSUES
+#  cum POS
+#  ut BINDING AND INSERSION ISSUES
+
+#  Deus, Dei NOT BINDING deus, dei
+#  totus WITH totus & totus2
+
+#  parsing of "Hippŏdămē, ēs, and Hippŏdămīa or -mēa, ae"
+# contra (prep and adv)
+#  'do, dare' connects to the wrong thing?
 
 
+# <entryFree key="ego" type="main" id="n15326"/>
+# ego                m                                                        PRON   5 1 PERS         X X X A X I, me (PERS); myself (REFLEX);
+
+# <entryFree key="meus" type="greek" id="n28988">
+# me                 me                                                       ADJ    1 1 POS          X X X A X my (personal possession); mine, of me, belonging to me; my own; to me;
+
+# <entryFree key="tu" type="main" id="n49339"><orth lang="la" extent="full">tū</orth>
+# tu                 t                                                        PRON   5 2 PERS         X X X A X you (sing.); thou/thine/thee/thy (PERS); yourself/thyself (REFLEX);
+
+# <entryFree key="tuus" type="main" id="n49559">
+# tu                 tu                                                       ADJ    1 1 POS          X X X A X your (sing.);
+
+# ONE OF THESE, NOT SURE:
+# <entryFree key="suus" type="main" id="n47174"><orth lang="la" extent="full">sŭus</orth>
+# <entryFree key="sui" type="main" id="n46498"><orth lang="la" extent="full">sŭi</orth>
+# su                 su                                                       ADJ    1 1 POS          X X X D X his/one's (own), her (own), hers, its (own); (pl.) their (own), theirs;
+
+
+# <entryFree n="1" key="qui1" type="main" id="n40103">
+# <entryFree n="2" key="qui2" type="main" id="n40104">
+# <entryFree n="1" key="quis1" type="main" id="n40242">
+# <entryFree n="2" key="quis2" type="main" id="n40243">
+
+# <entryFree key="ut" type="main" id="n49975">
+# ut                                                                          CONJ                    X X X A X to (+ subjunctive), in order that/to; how, as, when, while; even if;
+
+
+
+# TODO WW add 'di' as form of 'deus'
+#  I.E. IMPLEMENT UNIQUES?
+
+# TODO L&S
+#  2 word defs e.g. Bona Dea
 
 # with open("/home/henry/Desktop/latin_website/PyWhitakersWords/GeneratedFiles/JOINED.txt", "w", encoding='utf-8') as o:
 #     json.dump([n.to_dict(def_lookup=True) for n in ND], o, indent=1)

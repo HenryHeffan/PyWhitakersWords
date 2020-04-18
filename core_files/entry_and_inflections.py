@@ -632,7 +632,9 @@ class PackonDictData:
                self.tackon_str == other.tackon_str
 
     def alternate_form_match(self, other):
-        return self == other
+        return isinstance(other, PackonDictData) and \
+               self.pronoun_kind == other.pronoun_kind and \
+               self.tackon_str == other.tackon_str
 
     @staticmethod
     def from_str(s: str):
@@ -1043,6 +1045,12 @@ class DictionaryKey:
         self.lemma: 'DictionaryLemma' = lemma  # type: ignore  # this should be filled in by the DictionaryLemma class
         # self.lemma_index: int = 0
 
+    def __eq__(self, other):
+        return isinstance(other, DictionaryKey) and \
+               self.stems == other.stems and \
+               self.part_of_speech == other.part_of_speech and \
+               self.pos_data == other.pos_data
+
     def store(self, empty_stem="xxxxx", null_stem="zzz") -> str:
         stems = [(s if s is not "" else empty_stem) if s is not None else null_stem for s in self.stems]
         return "{} {} {} {} {} {}".format(stems[0], stems[1], stems[2], stems[3],
@@ -1124,7 +1132,7 @@ class DictionaryLemma:
                  dictionary_keys: List[DictionaryKey],  # the first key is considered the main form usually, but a formatter can choose
                  translation_metadata: 'TranslationMetadata',
                  definition: 'str',
-                 html_data: Optional[str],
+                 _html_data_raw: Optional[str],
                  index: int,
                  html_is_encoded: bool = False):
         # inflection stuff
@@ -1137,14 +1145,22 @@ class DictionaryLemma:
 
         # payload
         self.definition: str = definition
-        self.html_data = html_data
+        self._html_data_raw = _html_data_raw
+        self._html_decode_func: Callable[[str], str] = lambda s: s
+
         self.html_is_encoded = html_is_encoded
 
         # formating
         self.index = index
 
-    # def get_main_key(self) -> 'DictionaryKey':
-    #     return self.dictionary_keys[0]
+    @property
+    def html_data(self) -> str:
+        return self._html_decode_func(self._html_data_raw)
+
+    @html_data.setter
+    def html_data(self, new_html: str):
+        self._html_data_raw = new_html
+        self._html_decode_func = lambda s: s
 
     def store(self, header=False, only_ref_def=False) -> Dict:
         return {
@@ -1938,6 +1954,9 @@ class OldStyle_DICTLINE_Lexicon(PythonDictLexicon):
             last_lemma: Optional[DictionaryLemma] = None
             working_lemma: Optional[DictionaryLemma] = None
             for line in ifile:
+                if line.startswith("--"):
+                    continue
+                # print("LINE", line[:-1])
                 # if index > 1000:
                 #     break
                 # strip out the raw line into its groups
@@ -1945,6 +1964,10 @@ class OldStyle_DICTLINE_Lexicon(PythonDictLexicon):
                            line[3 * 19:4 * 19].strip()]
                 _stems = [x if x.strip() not in {"zzz", ""} else None for x in __stems]
 
+
+                # print(_stems)
+                # if _stems[0] == "qua":
+                #     0/0
                 part_of_speech = PartOfSpeech.from_str(line[76:82].strip())
                 pos_data = POS_DICT_ENTRY_CLASS_MP[part_of_speech].from_str(line[82:100].strip())
                 translation_metadata = TranslationMetadata(line[100:109].strip())
@@ -1962,16 +1985,10 @@ class OldStyle_DICTLINE_Lexicon(PythonDictLexicon):
                 # working_lemma will always only have 1 key in it at most. This is used to collect definitions
                 # last_lemma may have multiple keys. This is used to collect keys
 
-                # if working_lemma is not None and key == working_lemma.dictionary_keys[0]: # and definition == working_lemma.definition.split(''):
-                #     raise ValueError("repeated line")
-                if working_lemma is None:
-                    working_lemma = DictionaryLemma(part_of_speech, [new_key], translation_metadata, definition, None,
-                                                    -1)
-                    continue
 
-                if working_lemma is not None and new_key == working_lemma.dictionary_keys[
-                    0]:  # and defen != working_lemma.defen:
+                if working_lemma is not None and new_key == working_lemma.dictionary_keys[0]:  # and defen != working_lemma.defen:
                     working_lemma.definition += '\n' + definition
+                    # print("DEF CONT!", working_lemma.dictionary_keys[0].stems)
                     continue
                 # else working_lemma is None or key != working_lemma.key:
                 # the we need to either merge working_lemma into last lemma or push them back
@@ -1981,11 +1998,22 @@ class OldStyle_DICTLINE_Lexicon(PythonDictLexicon):
                     # merge them together
                     # print("MERGING!", last_lemma.dictionary_keys[-1], working_lemma.dictionary_keys[0])
                     last_lemma.dictionary_keys.append(working_lemma.dictionary_keys[0])
-                    working_lemma = None
+                    # print("AND THEN BUILDING WORKING LEMMA!", working_lemma.dictionary_keys[0].stems)
+                    working_lemma = DictionaryLemma(part_of_speech, [new_key], translation_metadata, definition, None,
+                                                    -1)
+                    continue
+                # if working_lemma is not None and key == working_lemma.dictionary_keys[0]: # and definition == working_lemma.definition.split(''):
+                #     raise ValueError("repeated line")
+                if working_lemma is None:
+                    working_lemma = DictionaryLemma(part_of_speech, [new_key], translation_metadata, definition,
+                                                    None,
+                                                    -1)
+                    # print("BUILDING WORKING LEMMA!", working_lemma.dictionary_keys[0].stems)
                     continue
 
                 if last_lemma is not None:  # add the last lemma
                     index += 1
+                    # print("ADDING!", last_lemma.store())
                     self._insert_lemma(last_lemma, index)
 
                 last_lemma = working_lemma
@@ -1998,11 +2026,10 @@ class OldStyle_DICTLINE_Lexicon(PythonDictLexicon):
             self._insert_lemma(working_lemma, index)
             index += 1
             self._insert_lemma(last_lemma, index)
-        STEMS = ("s", "", "fu", "fut")
-        index += 1
+
         SUM_ESSE_FUI = DictionaryLemma(PartOfSpeech.Verb,
                                        [DictionaryKey(
-                                           STEMS,
+                                           ("s", "", "fu", "fut"),
                                            PartOfSpeech.Verb,
                                            VerbDictData(ConjugationType(5), ConjugationSubtype(1), VerbKind.To_Being)
                                        )],
@@ -2010,13 +2037,15 @@ class OldStyle_DICTLINE_Lexicon(PythonDictLexicon):
                                        "be; exist; (also used to form verb perfect passive tenses) with NOM PERF PPL",
                                        None,
                                        index)
+        index += 1
         self._insert_lemma(SUM_ESSE_FUI, index)
 
 
 class NewStyle_Json_Lexicon(PythonDictLexicon):
-    def __init__(self, file_name: str):
+    def __init__(self, file_name: str, decode_func: Callable[[str], str]):
         PythonDictLexicon.__init__(self)
         self.file_name = file_name
+        self.decode_func = decode_func
 
     def load_dictionary(self, path: str):
         self._stem_map = {(pos, i): {} for pos in PartOfSpeech for i in [1,2,3,4]}
@@ -2024,22 +2053,24 @@ class NewStyle_Json_Lexicon(PythonDictLexicon):
             l = json.load(i)  # [:100]
         dictionary_lemmata = [DictionaryLemma.load(d) for d in l]
         for i, lemma in enumerate(dictionary_lemmata):
+            lemma._html_decode_func = self.decode_func
             self._insert_lemma(lemma, lemma.index)
 
 
 # The hope is that this case silently replace normal Lexicons, which being faster to load and MUCH lower memory usage
 # which is good on my server. It uses the code in low_memory_stems, which is c++ code that is backed by swig
 class BakedLexicon(NormalLexicon):
-    def __init__(self, dict_cpp_name: str):
+    def __init__(self, dict_cpp_name: str, decode_func: Callable[[str], str]):
         NormalLexicon.__init__(self)
         self.dict_cpp_name = dict_cpp_name
+        self.decode_func: Optional[Callable[[str], str]] = decode_func
         self.dict_object = None
 
     def load(self, path: str) -> None:
         import low_memory_stems.fast_dict_keys
         self.fdk = low_memory_stems.fast_dict_keys.get_lib()
-        self.fdk.set_extract_html_data_func(lambda s: s)
         self.dict_object = getattr(self.fdk, self.dict_cpp_name)
+        self.fdk.set_extract_html_data_func(self.dict_object, self.decode_func)
 
         self.load_inflections(path)
         self.load_addons(path)

@@ -170,21 +170,47 @@ class PronounFormater(FormaterBase):
         return self.SORT_ORDER.index(rule.pronoun_data.case) + 10 * rule.pronoun_data.number
 
     def setup(self) -> None:
-        # for Pronoun: nom, gen
-        for decl in range(10):
-            for decl_var in range(10):
-                self.inflection_table[(decl, decl_var)] = \
-                    [self.lex.get_pronoun_inflection_rule(decl, decl_var, gender, Case.Nominative, Number.Singular)
-                     for gender in Gender.MFN()]
+        # for Packon: nom, gen
+        for (decl, decl_var) in ALL_DECL_VAR_PAIRS:
+            self.inflection_table[(decl, decl_var)] = \
+                [(self.lex.get_pronoun_inflection_rule(decl, decl_var, gender, Case.Nominative, Number.Singular),
+                  self.lex.get_pronoun_inflection_rule(decl, decl_var, gender, Case.Genative, Number.Singular))
+                 for gender in Gender.MFN()]
+        # print("PRONOUN SETUP DONE")
+        # for k in self.inflection_table:
+        #     print("  ",k, self.inflection_table[k])
 
     def make_cannon_form_str(self, dic: DictionaryKey) -> str:
-        # print(dic.part_of_speech)
         infls = self.inflection_table[self.get_key(dic)]
-        if (dic.pronoun_data.declention, dic.pronoun_data.declention_variant) in {(3, 1), (4, 1), (6, 1)}:
+
+        if (dic.pronoun_data.declention, dic.pronoun_data.declention_variant) in {(3, 1), (3, 2), (4, 1),
+                                                                                  (4, 2), (6, 1), (6, 2)}:
             return "{}, {}, {}".format(
-                dic.make_form(infls[0], default="-"),
-                dic.make_form(infls[1], default="-"),
-                dic.make_form(infls[2], default="-"))
+                dic.make_form(infls[0][0]),
+                dic.make_form(infls[1][0]),
+                dic.make_form(infls[2][0]))
+        elif dic.pronoun_data.declention == 1:  # qui/quis, quae/qua, quod/quid
+            arr = [None] * 3
+            for k in dic.lemma.dictionary_keys:
+                # print("SCANNING", k.pronoun_data.declention_variant)
+                if k.pronoun_data.declention_variant in {1, 2}:
+                    # print("SETTING")
+                    arr[0] = self.inflection_table[self.get_key(k)][0][0]
+                elif k.pronoun_data.declention_variant in {3, 4}:
+                    # print("SETTING")
+                    arr[1] = self.inflection_table[self.get_key(k)][0][0]
+                elif k.pronoun_data.declention_variant in {6, 7}:
+                    # print("SETTING")
+                    arr[2] = self.inflection_table[self.get_key(k)][0][0]
+            # print(arr)
+            return "{}, {}, {}".format(
+                dic.make_form(arr[0], default="-"),
+                dic.make_form(arr[1], default="-"),
+                dic.make_form(arr[2], default="-"))
+        elif dic.pronoun_data.declention == 5:  # ego, mei
+            return "{}, {}".format(
+                dic.make_form(infls[0][0]),
+                dic.make_form(infls[0][1]))
         else:
             return ""
 
@@ -754,30 +780,39 @@ class PackonFormater(FormaterBase):
 
     def setup(self) -> None:
         # for Packon: nom, gen
-        for decl in range(10):
-            for decl_var in range(10):
-            # in set([self.get_key(dic)
-            #                          for i in range(1, 5)
-            #                          for (stem, l) in self.lex.stem_map[(PartOfSpeech.Packon, i)].items()
-            #                          for dic in l]):
-                self.inflection_table[(decl, decl_var)] = \
-                    [self.lex.get_pronoun_inflection_rule(decl, decl_var, gender, Case.Nominative, Number.Singular)
-                     for gender in Gender.MFN()]
+        for (decl, decl_var) in ALL_DECL_VAR_PAIRS:
+            self.inflection_table[(decl, decl_var)] = \
+                [(self.lex.get_pronoun_inflection_rule(decl, decl_var, gender, Case.Nominative, Number.Singular),
+                  self.lex.get_pronoun_inflection_rule(decl, decl_var, gender, Case.Genative, Number.Singular))
+                 for gender in Gender.MFN()]
+
+    def make_packon_form(self, dic: DictionaryKey, infl: InflectionRule):
+        form = dic.make_form(infl, default="-")
+        if form == "-":
+            return form
+        form += dic.packon_data.tackon_str
+        return form
 
     def make_cannon_form_str(self, dic: DictionaryKey) -> str:
         infls = self.inflection_table[self.get_key(dic)]
-        if (dic.packon_data.declention, dic.packon_data.declention_variant) in {(3, 1), (4, 1), (6, 1)}:
+
+        if (dic.pronoun_data.declention, dic.pronoun_data.declention_variant) in {(1, 0), (3, 1), (3, 2), (4, 1),
+                                                                                  (4, 2), (6, 1), (6, 2)}:
             return "{}, {}, {}".format(
-                dic.make_form(infls[0], default="-"),
-                dic.make_form(infls[1], default="-"),
-                dic.make_form(infls[2], default="-"))
+                self.make_packon_form(dic, infls[0][0]),
+                self.make_packon_form(dic, infls[1][0]),
+                self.make_packon_form(dic, infls[2][0]))
+        elif dic.pronoun_data.declention == 5:  # ego, mei
+            return "{}, {}".format(
+                self.make_packon_form(dic, infls[0][0]),
+                self.make_packon_form(dic, infls[0][1]))
         else:
             return ""
 
     def infl_entry_line(self, dic: DictionaryKey, infl: InflectionRule, word: str) -> str:
         # h.ic                 PRON   3 1 NOM S M
         return "{form}PRON   {decl} {decl_var} {case} {number} {gender}".format(
-            form=pad_to_len(infl.make_split_word_form(word), 21),
+            form=pad_to_len(infl.make_split_word_form(word) + '-' + dic.packon_data.tackon_str, 21),
             decl=dic.packon_data.declention,
             decl_var=dic.packon_data.declention_variant,
             case=pad_to_len(Case.str_val(infl.packon_data.case).upper(), 3),
@@ -1070,7 +1105,7 @@ class WWFormater(searcher.Formater):
         return "".join(output)
 
 def init(path: str, no_cache: bool=False, fast: bool = True) -> Tuple[OldStyle_DICTLINE_Lexicon, WWFormater]:
-    WW_LEXICON = (BakedLexicon("BAKED_WW") if fast else OldStyle_DICTLINE_Lexicon("DataFiles/DICTLINE.txt"))
+    WW_LEXICON = (BakedLexicon("BAKED_WW", lambda s: "") if fast else OldStyle_DICTLINE_Lexicon("DataFiles/DICTLINE.txt"))
     WW_LEXICON.load(path)
 
     WW_FORMATER = WWFormater(WW_LEXICON,

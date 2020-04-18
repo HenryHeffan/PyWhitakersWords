@@ -89,13 +89,14 @@ setattr(StemGroup, "__getitem__", _get_stem_stem_group)
 setattr(StemGroup, "__iter__", lambda s: iter([s[i] for i in [0,1,2,3]]))
 
 
-extract_html_data_func = lambda s: s
-def set_extract_html_data_func(func):
+extract_html_data_funcs = {}
+def set_extract_html_data_func(dict_obj, func):
     # the function should take in a string, _stored_html_data, and output a string
-    assert func is not None
-    global extract_html_data_func
-    extract_html_data_func = func
-setattr(DictionaryLemma, "html_data", property(lambda x: extract_html_data_func(x.stored_html_data)))
+    if func is not None:
+        func = lambda s: ""
+    extract_html_data_funcs[dict_obj.baked_dictionary_index] = func
+setattr(DictionaryLemma, "html_data",
+        property(lambda lemma: extract_html_data_funcs[lemma.baked_dictionary_index](lemma.stored_html_data)))
 
 from core_files.utils import load_utf_str
 DictionaryLemma.html_data = property(lambda x: x.stored_html_data)

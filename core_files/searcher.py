@@ -145,13 +145,11 @@ class EntryQuery:
             ))
         return format_groups
 
-
+# TODO: I really hate this function. Is there a way to make it seem less hacky
 def group_dic_infl_pairs(matched_dic_key_infl_rule_pairs: List[Tuple[DictionaryKey, InflectionRule]],
                          prefix: Optional[PrefixEntry],
                          suffix: Optional[SuffixEntry],
                          tackon: Optional[TackonEntry]) -> List[FormGroup]:
-    # print("GATHERING")
-    # Also gather up ('qu', None|'cu') and ('aliqu', None|'alicu') pairs
     KEYS = {'qu', 'aliqu', "cum", "cumque", "piam", "que", "dam", "lubet", "libet", "nam", "quam", "vis"}
     lemma_forms_map: Dict[str, Tuple[DictionaryLemma, List[Tuple[DictionaryKey, InflectionRule]]]] = {k: (None, []) for k in KEYS}  # gather the inflection for each dictionary entry
     for dic_key, infl_rule in matched_dic_key_infl_rule_pairs:
@@ -170,7 +168,6 @@ def group_dic_infl_pairs(matched_dic_key_infl_rule_pairs: List[Tuple[DictionaryK
                 lemma_forms_map[dic_key.lemma.index] = (dic_key.lemma, [])
             lemma_forms_map[dic_key.lemma.index][1].append((dic_key, infl_rule))
 
-    # print("LEMMA FORMS MAP", lemma_forms_map)
     grouped_list = []
     for k, (lemma, forms) in lemma_forms_map.items():
         if len(forms) == 0:
@@ -187,7 +184,7 @@ def group_dic_infl_pairs(matched_dic_key_infl_rule_pairs: List[Tuple[DictionaryK
                 fake_key = DictionaryKey(('qu', 'cu', None, None),
                                      PartOfSpeech.Pronoun,
                                      PronounDictData(DeclentionType(1), DeclentionSubtype(0), PronounKind.X))
-            else:  # if k == 'quPACK':
+            else:  # then k == 'PACK str':
                 d = PackonDictData(DeclentionType(1), DeclentionSubtype(0), PronounKind.X)
                 d.tackon_str = forms[0][0].packon_data.tackon_str
                 fake_key = DictionaryKey(('qu', 'cu', None, None),
@@ -206,19 +203,8 @@ def group_dic_infl_pairs(matched_dic_key_infl_rule_pairs: List[Tuple[DictionaryK
                 "\n".join(htmls),
                 0
             ), cut_forms, prefix, suffix, tackon))
-                # tackon if pos != PartOfSpeech.Packon else None
-            # print("ADDING GROUP")
         else:
             grouped_list.append(FormGroup(lemma, sorted(forms, key=lambda x: x[1].index), prefix, suffix, tackon))
-        # print(grouped_list)
-    # print("GROUPED LIST", grouped_list)
-    #
-    # for dic_key, infl_rule in matched_dic_key_infl_rule_pairs:
-    #     if not str(dic_key.lemma) in lemma_forms_map:
-    #         lemma_forms_map[str(dic_key.lemma)] = (dic_key.lemma, [])
-    #     lemma_forms_map[str(dic_key.lemma)][1].append((dic_key, infl_rule))
-    # grouped_list = [FormGroup(lemma, sorted(forms, key=lambda x: x[1].index), prefix, suffix, tackon)
-    #                 for k, (lemma, forms) in lemma_forms_map.items()]
 
     grouped_list.sort(key=lambda group: group.lemma.index)
     return grouped_list

@@ -148,17 +148,18 @@ const DictionaryKeyPtrView DictionaryKeyPtrView::_get_sub_to_end_array(int start
 
 
 DictionaryLemma::DictionaryLemma(
-        int part_of_speech,
+        const int part_of_speech,
         const char *translation_metadata,
         const char *definition, const char *html_data,
-        int index, const DictionaryKey *keys, int keys_ct):
+        const int index, const DictionaryKey *keys, const int keys_ct, const short baked_dictionary_index):
             part_of_speech(part_of_speech),
             translation_metadata(translation_metadata),
             definition(definition),
             _stored_html_data(html_data),
             dictionary_keys_array(keys),
             dictionary_keys_ct(keys_ct),
-            index(index) { }
+            index(index),
+            baked_dictionary_index(baked_dictionary_index) { }
 
     const DictionaryKeyView DictionaryLemma::_property_dictionary_keys() const {
         return DictionaryKeyView(this->dictionary_keys_array, (unsigned int)this->dictionary_keys_ct);
@@ -227,8 +228,8 @@ const DictionaryLemma *DictionaryLemmaListView::_get_index(int index) const{
 }
 
 
-BakedDictionaryStemCollection::BakedDictionaryStemCollection(const HashTable (&lookup_table)[13][4], const DictionaryLemmaListView lemma_vec):
-        lookup_table(lookup_table), lemma_vec(lemma_vec) { };
+BakedDictionaryStemCollection::BakedDictionaryStemCollection(const HashTable (&lookup_table)[13][4], const DictionaryLemmaListView lemma_vec, const short baked_dictionary_index):
+        lookup_table(lookup_table), lemma_vec(lemma_vec), baked_dictionary_index(baked_dictionary_index) { };
 
 const HashTable *BakedDictionaryStemCollection::get_hashtable_for(int pos, int stem_key) const
 {

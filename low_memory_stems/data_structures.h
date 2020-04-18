@@ -29,10 +29,11 @@ public:
     const char *s3;
     const char *s4;
 
+    StemGroup(const char *s1, const char *s2, const char *s3, const char *s4);
+
     const char *_get_cstr(int i) const;
     const string _get_elem(int i) const;
 
-    StemGroup(const char *s1, const char *s2, const char *s3, const char *s4);
 };
 
 
@@ -40,9 +41,9 @@ class DictionaryKey {
 private:
     const DictData *data;
 public:
+    const DictionaryLemma *lemma;
     const StemGroup stems;
     const int part_of_speech;
-    const DictionaryLemma *lemma;
 
     DictionaryKey(const char *s1, const char *s2, const char *s3, const char *s4,
                   const int part_of_speech, const DictData *data, const DictionaryLemma *lemma);
@@ -94,11 +95,15 @@ public:
     const int part_of_speech;
     const int index;
 
+    // track which dictionary this lemma is in, in case multiple baked dictionaries are loaded
+    const short baked_dictionary_index;
+
     DictionaryLemma(
-        int part_of_speech,
+        const int part_of_speech,
         const char *translation_metadata,
         const char *definition, const char *html_data,
-        int index, const DictionaryKey *keys, int keys_ct);
+        const int index, const DictionaryKey *keys, const int keys_ct,
+        const short baked_dictionary_index);
 
     const DictionaryKeyView _property_dictionary_keys() const;
     const string _property_definition() const;
@@ -169,7 +174,10 @@ private:
     const HashTable lookup_table[13][4]; // const HashTable lookup_table[MAX_PartOfSpeech][4];
     const DictionaryLemmaListView lemma_vec;
 public:
-    BakedDictionaryStemCollection(const HashTable (&lookup_table)[13][4], const DictionaryLemmaListView lemma_vec);
+    // track which dictionary this lemma is in, in case multiple baked dictionaries are loaded
+    const short baked_dictionary_index;
+
+    BakedDictionaryStemCollection(const HashTable (&lookup_table)[13][4], const DictionaryLemmaListView lemma_vec, const short baked_dictionary_index);
 
     const HashTable *get_hashtable_for(int pos, int stem_key) const;
     const void load (const string &path) const;
