@@ -179,7 +179,7 @@ for key in WW_LEXICON.dictionary_keys:
         # assert key.html_data is None, (k2, key.lemma.html_data)
         key.html_data = [ent.extract_html() for ent in ENT_DIC[k2]]
         key.ent_id = [ent.id for ent in ENT_DIC[k2]]
-        del ENT_DIC[k2]
+        # del ENT_DIC[k2]
 
 for lemma in WW_LEXICON.dictionary_lemmata:
     htmls = []
@@ -236,8 +236,15 @@ with open(os.path.join(PATH, "GeneratedFiles/JOINED_ONLY_REF_DEF.txt"), "w", enc
 
 with open(os.path.join(PATH, "GeneratedFiles/REF_DEF_TABLE.txt"), "w") as o:
     for ent in ls_ents:
-        o.write(ent.id + " " + store_utf_str("".join(ent.extract_html())))  # write_lemma_fast_cpp_format(o, lemma, only_ref_def=True)
+        o.write(ent.id + " " + ("".join(ent.extract_html())))  # write_lemma_fast_cpp_format(o, lemma, only_ref_def=True)
         o.write("\n")
+
+
+# with open(os.path.join(PATH, "GeneratedFiles/REF_DEF_TABLE_B64.txt"), "w") as o:
+#     for ent in ls_ents:
+#         o.write(ent.id + " " + store_utf_str("".join(ent.extract_html())))  # write_lemma_fast_cpp_format(o, lemma, only_ref_def=True)
+#         o.write("\n")
+
 
 from core_files import whitakers_words
 ww, _ = whitakers_words.init(PATH, no_cache=True, fast=False)

@@ -1125,6 +1125,10 @@ class DictionaryKey:
         # assert isinstance(self.pos_data, PackonDictData)
         return self.pos_data
 
+    @property
+    def pro_pack_data(self) -> Union[PronounDictData, PackonDictData]:
+        # assert isinstance(self.pos_data, PronounDictData)
+        return self.pos_data
 
 class DictionaryLemma:
     def __init__(self,
@@ -1132,9 +1136,8 @@ class DictionaryLemma:
                  dictionary_keys: List[DictionaryKey],  # the first key is considered the main form usually, but a formatter can choose
                  translation_metadata: 'TranslationMetadata',
                  definition: 'str',
-                 _html_data_raw: Optional[str],
-                 index: int,
-                 html_is_encoded: bool = False):
+                 extra_def: Optional[str],
+                 index: int):
         # inflection stuff
         self.part_of_speech = part_of_speech
         self.dictionary_keys = dictionary_keys
@@ -1145,22 +1148,10 @@ class DictionaryLemma:
 
         # payload
         self.definition: str = definition
-        self._html_data_raw = _html_data_raw
-        self._html_decode_func: Callable[[str], str] = lambda s: s
-
-        self.html_is_encoded = html_is_encoded
+        self.extra_def = extra_def
 
         # formating
         self.index = index
-
-    @property
-    def html_data(self) -> str:
-        return self._html_decode_func(self._html_data_raw)
-
-    @html_data.setter
-    def html_data(self, new_html: str):
-        self._html_data_raw = new_html
-        self._html_decode_func = lambda s: s
 
     def store(self, header=False, only_ref_def=False) -> Dict:
         return {
@@ -1168,7 +1159,7 @@ class DictionaryLemma:
             'keys': [key.store() for key in self.dictionary_keys],
             'metadata': self.translation_metadata.to_str(),
             'def': self.definition if not header else "",
-            'html': (self.html_data if not header else "") if not only_ref_def else (self.ent_id if hasattr(self, "ent_id") else " "),
+            'extra_def': (self.extra_def if not header else "") if not only_ref_def else (self.ent_id if hasattr(self, "ent_id") else " "),
             'index': self.index
         }
 
@@ -1178,7 +1169,7 @@ class DictionaryLemma:
                                [DictionaryKey.load(key) for key in data['keys']],
                                TranslationMetadata(data['metadata']),
                                data['def'],
-                               data['html'],
+                               data['extra_def'],
                                data['index'])
 
     def rebuild(self, index: int) -> None:
@@ -1186,87 +1177,6 @@ class DictionaryLemma:
             assert key.part_of_speech == self.part_of_speech, (key.part_of_speech, self.part_of_speech)
             key.lemma = self
         self.index = index
-
-        # (self,
-        #          stems: StemGroup,
-        #          part_of_speech: PartOfSpeech,
-        #          dictionary_entry,
-        #          translation_metadata: 'TranslationMetadata',
-        #          definition: 'Definiton',
-        #          html_data: Optional[str],
-        #          index: int,
-        #          line: Optional[str] = None):
-        #
-        # # inflection stuff
-        # self.stems = stems
-        # self.part_of_speech = part_of_speech
-        # self.dictionary_entry = dictionary_entry
-        # self.translation_metadata: TranslationMetadata = translation_metadata
-        #
-        # # payload
-        # self.definition: Definiton = definition
-        # self.html_data = html_data
-        # self.line=line
-        #
-        # # formating
-        # self.index = index
-    #
-    # def make_form(self, infl: Optional['InflectionRule'], default="NULL_FORM") -> str:
-    #     if infl is None or self.stems[infl.stem_key - 1] is None:
-    #         return default
-    #     stem = self.stems[infl.stem_key - 1]
-    #     assert stem is not None
-    #     return stem + infl.ending
-    #
-    # @property
-    # def pronoun_data(self) -> PronounDictData:
-    #     # assert isinstance(self.dictionary_entry, PronounDictData)
-    #     return self.dictionary_entry
-    #
-    # @property
-    # def noun_data(self) -> NounDictData:
-    #     # assert isinstance(self.dictionary_entry, NounDictData)
-    #     return self.dictionary_entry
-    #
-    # @property
-    # def verb_data(self) -> VerbDictData:
-    #     # assert isinstance(self.dictionary_entry, VerbDictData)
-    #     return self.dictionary_entry
-    #
-    # @property
-    # def preposition_data(self) -> PrepositionDictData:
-    #     # assert isinstance(self.dictionary_entry, PrepositionDictData)
-    #     return self.dictionary_entry
-    #
-    # @property
-    # def interjection_data(self) -> InterjectionDictData:
-    #     # assert isinstance(self.dictionary_entry, InterjectionDictData)
-    #     return self.dictionary_entry
-    #
-    # @property
-    # def adjective_data(self) -> AdjectiveDictData:
-    #     # assert isinstance(self.dictionary_entry, AdjectiveDictData)
-    #     return self.dictionary_entry
-    #
-    # @property
-    # def adverb_data(self) -> AdverbDictData:
-    #     # assert isinstance(self.dictionary_entry, AdverbDictData)
-    #     return self.dictionary_entry
-    #
-    # @property
-    # def conjunction_data(self) -> ConjunctionDictData:
-    #     # assert isinstance(self.dictionary_entry, ConjunctionDictData)
-    #     return self.dictionary_entry
-    #
-    # @property
-    # def number_data(self) -> NumberDictData:
-    #     # assert isinstance(self.dictionary_entry, NumberDictData)
-    #     return self.dictionary_entry
-    #
-    # @property
-    # def packon_data(self) -> PackonDictData:
-    #     # assert isinstance(self.dictionary_entry, PackonDictData)
-    #     return self.dictionary_entry
 
 
 class InflectionRule:
@@ -1352,6 +1262,9 @@ class InflectionRule:
         # assert isinstance(self.pos_data, SupineInflData)
         return self.pos_data
 
+    @property
+    def pro_pack_data(self) -> Union[PronounInflData, PackonInflData]:
+        return self.pos_data
 
 # class Definiton:
 #     def __init__(self, line: Union[str, List[str]]):
@@ -1954,7 +1867,7 @@ class OldStyle_DICTLINE_Lexicon(PythonDictLexicon):
             last_lemma: Optional[DictionaryLemma] = None
             working_lemma: Optional[DictionaryLemma] = None
             for line in ifile:
-                if line.startswith("--"):
+                if line.startswith("--") or line in {"", "\n"}:
                     continue
                 # print("LINE", line[:-1])
                 # if index > 1000:
@@ -2042,10 +1955,9 @@ class OldStyle_DICTLINE_Lexicon(PythonDictLexicon):
 
 
 class NewStyle_Json_Lexicon(PythonDictLexicon):
-    def __init__(self, file_name: str, decode_func: Callable[[str], str]):
+    def __init__(self, file_name: str):
         PythonDictLexicon.__init__(self)
         self.file_name = file_name
-        self.decode_func = decode_func
 
     def load_dictionary(self, path: str):
         self._stem_map = {(pos, i): {} for pos in PartOfSpeech for i in [1,2,3,4]}
@@ -2053,24 +1965,21 @@ class NewStyle_Json_Lexicon(PythonDictLexicon):
             l = json.load(i)  # [:100]
         dictionary_lemmata = [DictionaryLemma.load(d) for d in l]
         for i, lemma in enumerate(dictionary_lemmata):
-            lemma._html_decode_func = self.decode_func
             self._insert_lemma(lemma, lemma.index)
 
 
 # The hope is that this case silently replace normal Lexicons, which being faster to load and MUCH lower memory usage
 # which is good on my server. It uses the code in low_memory_stems, which is c++ code that is backed by swig
 class BakedLexicon(NormalLexicon):
-    def __init__(self, dict_cpp_name: str, decode_func: Callable[[str], str]):
+    def __init__(self, dict_cpp_name: str):
         NormalLexicon.__init__(self)
         self.dict_cpp_name = dict_cpp_name
-        self.decode_func: Optional[Callable[[str], str]] = decode_func
         self.dict_object = None
 
     def load(self, path: str) -> None:
         import low_memory_stems.fast_dict_keys
         self.fdk = low_memory_stems.fast_dict_keys.get_lib()
         self.dict_object = getattr(self.fdk, self.dict_cpp_name)
-        self.fdk.set_extract_html_data_func(self.dict_object, self.decode_func)
 
         self.load_inflections(path)
         self.load_addons(path)

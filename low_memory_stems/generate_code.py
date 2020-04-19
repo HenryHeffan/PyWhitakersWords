@@ -350,7 +350,7 @@ def add_baked_dictionary(d, name, baked_dict_index):
         LEMMA_VEC = []
         for lemma in lemma_block:
             LEMMA_VEC.append(
-                """DictionaryLemma({part_of_speech}, {translation_metadata}, "{definition}", "{html_data}", {index}, &{keys}, {keys_len}, {baked_dict_index})""".format(
+                """DictionaryLemma({part_of_speech}, {translation_metadata}, "{definition}", "{extra_def}", {index}, &{keys}, {keys_len}, {baked_dict_index})""".format(
                     part_of_speech=int(lemma.part_of_speech),  # .name,
                     translation_metadata='"{}{}{}{}{}"'.format(
                         int(lemma.translation_metadata.age),
@@ -358,8 +358,8 @@ def add_baked_dictionary(d, name, baked_dict_index):
                         lemma.translation_metadata.geo,
                         int(lemma.translation_metadata.frequency),
                         lemma.translation_metadata.source),
-                    definition=lemma.definition.replace("\"", "\\\""),
-                    html_data=lemma.html_data if lemma.html_data else "",
+                    definition=lemma.definition.replace("\"", "\\\"").replace("\n", "\\n"),
+                    extra_def=lemma.extra_def if lemma.extra_def else "",
                     index=lemma.index,
                     keys=lemma.key_arr_ref_str,
                     keys_len=len(lemma.dictionary_keys),

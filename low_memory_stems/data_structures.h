@@ -87,7 +87,7 @@ public:
 
 class DictionaryLemma {
     const char *translation_metadata;
-    const char *_stored_html_data;
+    const char *extra_def;
     const char *definition;
     const DictionaryKey *dictionary_keys_array;
     const int dictionary_keys_ct;
@@ -101,7 +101,7 @@ public:
     DictionaryLemma(
         const int part_of_speech,
         const char *translation_metadata,
-        const char *definition, const char *html_data,
+        const char *definition, const char *extra_def,
         const int index, const DictionaryKey *keys, const int keys_ct,
         const short baked_dictionary_index);
 

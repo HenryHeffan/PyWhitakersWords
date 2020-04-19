@@ -72,6 +72,7 @@ def _get_pos_data_dict_key(key):
     return None
 
 DictionaryKey.pos_data = property(lambda self: _get_pos_data_dict_key(self))
+DictionaryKey.pro_pack_data = property(lambda self: self.pos_data)
 setattr(DictionaryKey, "make_form", make_form)
 
 def _PACKON_accepts_tackon(packon, tackon):
@@ -87,19 +88,6 @@ def _get_stem_stem_group(stem_group, indx):
 
 setattr(StemGroup, "__getitem__", _get_stem_stem_group)
 setattr(StemGroup, "__iter__", lambda s: iter([s[i] for i in [0,1,2,3]]))
-
-
-extract_html_data_funcs = {}
-def set_extract_html_data_func(dict_obj, func):
-    # the function should take in a string, _stored_html_data, and output a string
-    if func is not None:
-        func = lambda s: ""
-    extract_html_data_funcs[dict_obj.baked_dictionary_index] = func
-setattr(DictionaryLemma, "html_data",
-        property(lambda lemma: extract_html_data_funcs[lemma.baked_dictionary_index](lemma.stored_html_data)))
-
-from core_files.utils import load_utf_str
-DictionaryLemma.html_data = property(lambda x: x.stored_html_data)
 
 
 class MyListIterator:

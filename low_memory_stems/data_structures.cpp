@@ -150,12 +150,12 @@ const DictionaryKeyPtrView DictionaryKeyPtrView::_get_sub_to_end_array(int start
 DictionaryLemma::DictionaryLemma(
         const int part_of_speech,
         const char *translation_metadata,
-        const char *definition, const char *html_data,
+        const char *definition, const char *extra_def,
         const int index, const DictionaryKey *keys, const int keys_ct, const short baked_dictionary_index):
             part_of_speech(part_of_speech),
             translation_metadata(translation_metadata),
             definition(definition),
-            _stored_html_data(html_data),
+            extra_def(extra_def),
             dictionary_keys_array(keys),
             dictionary_keys_ct(keys_ct),
             index(index),
