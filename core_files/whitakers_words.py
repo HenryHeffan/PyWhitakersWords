@@ -650,7 +650,7 @@ class WWFormater(searcher.Formater):
         return "".join(output)
 
 def init(path: str, no_cache: bool=False, fast: bool = True) -> Tuple[OldStyle_DICTLINE_Lexicon, WWFormater]:
-    WW_LEXICON = (BakedLexicon("BAKED_WW", lambda s: "") if fast else OldStyle_DICTLINE_Lexicon("DataFiles/DICTLINE.txt"))
+    WW_LEXICON = (BakedLexicon("BAKED_WW") if fast else OldStyle_DICTLINE_Lexicon("DataFiles/DICTLINE.txt"))
     WW_LEXICON.load(path)
 
     WW_FORMATER = WWFormater(WW_LEXICON)

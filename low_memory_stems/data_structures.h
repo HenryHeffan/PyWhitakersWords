@@ -87,7 +87,7 @@ public:
 
 class DictionaryLemma {
     const char *translation_metadata;
-    const char *extra_def;
+    const char *_extra_def;
     const char *definition;
     const DictionaryKey *dictionary_keys_array;
     const int dictionary_keys_ct;
@@ -101,13 +101,13 @@ public:
     DictionaryLemma(
         const int part_of_speech,
         const char *translation_metadata,
-        const char *definition, const char *extra_def,
+        const char *definition, const char *_extra_def,
         const int index, const DictionaryKey *keys, const int keys_ct,
         const short baked_dictionary_index);
 
     const DictionaryKeyView _property_dictionary_keys() const;
     const string _property_definition() const;
-    const string _property_stored_html_data() const;
+    const string _property_extra_def() const;
     const TranslationMetadata _property_translation_metadata() const;
 };
 

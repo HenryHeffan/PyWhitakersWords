@@ -150,12 +150,12 @@ const DictionaryKeyPtrView DictionaryKeyPtrView::_get_sub_to_end_array(int start
 DictionaryLemma::DictionaryLemma(
         const int part_of_speech,
         const char *translation_metadata,
-        const char *definition, const char *extra_def,
+        const char *definition, const char *_extra_def,
         const int index, const DictionaryKey *keys, const int keys_ct, const short baked_dictionary_index):
             part_of_speech(part_of_speech),
             translation_metadata(translation_metadata),
             definition(definition),
-            extra_def(extra_def),
+            _extra_def(_extra_def),
             dictionary_keys_array(keys),
             dictionary_keys_ct(keys_ct),
             index(index),
@@ -167,8 +167,8 @@ DictionaryLemma::DictionaryLemma(
     const string DictionaryLemma::_property_definition() const {
         return string(this->definition);
     }
-    const string DictionaryLemma::_property_stored_html_data() const {
-        return string(this->_stored_html_data);
+    const string DictionaryLemma::_property_extra_def() const {
+        return string(this->_extra_def);
     }
     const TranslationMetadata DictionaryLemma::_property_translation_metadata() const {
         return TranslationMetadata(this->translation_metadata);

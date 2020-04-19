@@ -7,8 +7,8 @@ def run():
 
     import core_files.whitakers_words as ww
     import core_files.joined_formater_html as jd
-    J_LEX, J_FORM = jd.init(PATH, fast=False) #, load_html_def_dict=True)
-    WW_LEX, WW_FORM = ww.init(PATH, fast=False)
+    J_LEX, J_FORM = jd.init(PATH) #, load_html_def_dict=True)
+    WW_LEX, WW_FORM = ww.init(PATH)
 
     for word in ["abacus", "abacti", "abbatissa", "abbatizo", "fato", "prougus", "hi", "a", "qui", "quicumque", "quibus", "praecanto", ""] + \
                 ("arma virumque cano troiai qui primus ab oris italiam fato prougus et litora livina"

@@ -409,7 +409,7 @@ class JPackonFormater(PackonFormater, JPOSFormater):
 
 
 class JFormater(searcher.Formater):
-    def __init__(self, lex: Lexicon, make_LAS_content=Optional[Callable[[str], str]]):
+    def __init__(self, lex: Lexicon, make_LAS_content: Optional[Callable[[str], str]] = None):
         searcher.Formater.__init__(self, lex)
         self.map = {
             PartOfSpeech.Noun: JNounFormater(lex),
