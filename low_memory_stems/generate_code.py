@@ -797,7 +797,7 @@ def add_baked_inflection_rules(d, name):
     #     lemmas = lemmata_array_st
     # ))
 
-short=True
+short=False
 
 from core_files.whitakers_words import init
 ww, _ = init(PATH, fast=False, short=short)
