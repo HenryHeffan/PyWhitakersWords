@@ -198,7 +198,7 @@ class VerbFormater(POSFormater):
         if rule.part_of_speech != PartOfSpeech.Participle:
             return 0
         else:
-            return self.SORT_ORDER_VPAR.index(rule.participle_entry.case) + 10 * rule.participle_entry.number
+            return self.SORT_ORDER_VPAR.index(rule.participle_data.case) + 10 * rule.participle_data.number
 
 
 # TODO: this one needs work

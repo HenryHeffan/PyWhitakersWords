@@ -7,6 +7,7 @@
 	#include "generated.h"
 	#include "baked.h"
 	#include "data_structures.h"
+	#include "generic_data_structures.h"
 %} 
 
 %include <std_string.i>
@@ -25,17 +26,27 @@
 %ignore operator>>;
 %ignore StemGroup(const char*, const char*, const char*, const char*);
 %ignore HashTable(const HashTableCell **, const unsigned long, const int);
+
 %include "generated.h"
+%include "generic_data_structures.h"
+
+%template(ArrayViewDictionaryKey)     ArrayView<DictionaryKey>;
+%template(ArrayViewInflectionRule)    ArrayView<InflectionRule>;
+
+%template(PtrArrayViewDictionaryKey)  PtrArrayView<DictionaryKey>;
+%template(PtrArrayViewInflectionRule) PtrArrayView<InflectionRule>;
+
+%template(BlockedLemmaArrayView)   BlockedArrayView<DictionaryLemma>;
+%template(BlockedInflectionRuleArrayView)   BlockedArrayView<InflectionRule>;
+
+%template(HashTable_to_DictionaryKeyList)    HashTable<DictionaryKey>;
+%template(HashTable_to_InflectionRuleList)   HashTable<InflectionRule>;
+
 %include "data_structures.h"
 
-%pythoncode %{
 
-def make_form(self, infl, default="NULL_FORM"):
-    if infl is None or self.stems[infl.stem_key - 1] is None:
-        return default
-    stem = self.stems[infl.stem_key - 1]
-    assert stem is not None
-    return stem + infl.ending
+
+%pythoncode %{
 
 def implement_properties(c):
     for k in list(c.__dict__):
@@ -46,6 +57,16 @@ def implement_properties(c):
 
 implement_properties(DictionaryKey)
 implement_properties(DictionaryLemma)
+implement_properties(InflectionRule)
+
+# SETUP DICTIONARY_KEY
+
+def make_form(self, infl, default="NULL_FORM"):
+    if infl is None or self.stems[infl.stem_key - 1] is None:
+        return default
+    stem = self.stems[infl.stem_key - 1]
+    assert stem is not None
+    return stem + infl.ending
 
 def _get_pos_data_dict_key(key):
     import core_files.entry_and_inflections
@@ -75,10 +96,54 @@ DictionaryKey.pos_data = property(lambda self: _get_pos_data_dict_key(self))
 DictionaryKey.pro_pack_data = property(lambda self: self.pos_data)
 setattr(DictionaryKey, "make_form", make_form)
 
-def _PACKON_accepts_tackon(packon, tackon):
+# SETUP INFLECTION_RULE
+
+def _get_pos_data_infl_rule(inlf):
     import core_files.entry_and_inflections
-    return tackon is not None and tackon.tackon == packon.tackon_str and tackon.pos == core_files.entry_and_inflections.PartOfSpeech.Packon
-setattr(PackonDictData, "accepts_tackon", _PACKON_accepts_tackon)
+    if inlf.part_of_speech == core_files.entry_and_inflections.PartOfSpeech.Verb:
+        return inlf.verb_data
+    if inlf.part_of_speech == core_files.entry_and_inflections.PartOfSpeech.Noun:
+        return inlf.noun_data
+    if inlf.part_of_speech == core_files.entry_and_inflections.PartOfSpeech.Pronoun:
+        return inlf.pronoun_data
+    if inlf.part_of_speech == core_files.entry_and_inflections.PartOfSpeech.Adjective:
+        return inlf.adjective_data
+    if inlf.part_of_speech == core_files.entry_and_inflections.PartOfSpeech.Adverb:
+        return inlf.adverb_data
+    if inlf.part_of_speech == core_files.entry_and_inflections.PartOfSpeech.Conjunction:
+        return inlf.conjunction_data
+    if inlf.part_of_speech == core_files.entry_and_inflections.PartOfSpeech.Preposition:
+        return inlf.preposition_data
+    if inlf.part_of_speech == core_files.entry_and_inflections.PartOfSpeech.Interjection:
+        return inlf.interjection_data
+    if inlf.part_of_speech == core_files.entry_and_inflections.PartOfSpeech.Number:
+        return inlf.number_data
+    if inlf.part_of_speech == core_files.entry_and_inflections.PartOfSpeech.Packon:
+        return inlf.packon_data
+    if inlf.part_of_speech == core_files.entry_and_inflections.PartOfSpeech.Participle:
+        return inlf.participle_data
+    if inlf.part_of_speech == core_files.entry_and_inflections.PartOfSpeech.Supine:
+        return inlf.supine_data
+    return None
+
+InflectionRule.pos_data = property(lambda self: _get_pos_data_infl_rule(self))
+InflectionRule.pro_pack_data = property(lambda self: self.pos_data)
+
+def make_split_word_form(inlf, word):
+    assert word.lower().endswith(inlf.ending)
+    if inlf.ending == "":
+        return word
+    else:
+        return word[:-len(inlf.ending)] + "." + inlf.ending
+setattr(InflectionRule, "make_split_word_form", make_split_word_form)
+
+
+#def _PACKON_accepts_tackon(packon, tackon):
+#    return tackon is not None and tackon.tackon == packon.tackon_str and tackon.pos == core_files.entry_and_inflections.PartOfSpeech.Packon
+
+import core_files.entry_and_inflections
+setattr(PackonDictData, "accepts_tackon",
+        lambda self, tackon: core_files.entry_and_inflections.PackonDictData.accepts_tackon(self, tackon))
 
 def _get_stem_stem_group(stem_group, indx):
     if indx not in {0,1,2,3}:
@@ -108,24 +173,35 @@ class MyListIterator:
     def __iter__(self):
         return self
 
-DictionaryKeyView.__iter__ = lambda self: MyListIterator(self, len(self))
-DictionaryKeyPtrView.__iter__ = lambda self: MyListIterator(self, len(self))
-DictionaryLemmaListView.__iter__ = lambda self: MyListIterator(self, len(self))
-def _get_item_DictionaryKeyPtrView_HELPER(keyview, i):
-    if isinstance(i, int):
-        return keyview._get_index(i)
-    elif isinstance(i, slice):
-        assert i.stop is None and i.step is None
-        return keyview._get_sub_to_end_array(i.start)
-    else:
-        raise ValueError()
-DictionaryKeyPtrView.__getitem__ = _get_item_DictionaryKeyPtrView_HELPER
-DictionaryKeyView.__getitem__ = _get_item_DictionaryKeyPtrView_HELPER
+def initialize_arrayview(c):
+    def _get_item_helper(inst, i):
+        if isinstance(i, int):
+            return inst._get_index(i)
+        elif isinstance(i, slice) and hasattr(inst, "_get_sub_to_end_array"):
+            assert i.stop is None and i.step is None
+            return getattr(inst, "_get_sub_to_end_array")(i.start)
+        else:
+            raise ValueError()
+    c.__iter__ = lambda self: MyListIterator(self, len(self))
+    setattr(c, "__getitem__", _get_item_helper)
 
-def _get_item_DictionaryLemmaBlockList_HELPER(lemma_list, i):
-    assert isinstance(i, int)
-    return lemma_list._get_index(i)
+for c in [ArrayViewDictionaryKey, ArrayViewInflectionRule, PtrArrayViewDictionaryKey,
+          PtrArrayViewInflectionRule, BlockedLemmaArrayView, BlockedInflectionRuleArrayView]:
+    initialize_arrayview(c)
 
-DictionaryLemmaListView.__getitem__ = _get_item_DictionaryLemmaBlockList_HELPER
+from core_files.base_data_structures import POS_DICT_ENTRY_CLASS_MP, POS_INFL_ENTRY_CLASS_MP
+
+for c in list(POS_DICT_ENTRY_CLASS_MP.values()) + list(POS_INFL_ENTRY_CLASS_MP.values()):
+    c = globals()[c.__name__]
+    if hasattr(c, "_case"):
+        setattr(c, "case", getattr(c, "_case"))
+        delattr(c, "_case")
+
+for c in POS_INFL_ENTRY_CLASS_MP.values():
+    nc = globals()[c.__name__]
+    for name in c.__dict__:
+        if not hasattr(nc, name):
+            setattr(nc, name, getattr(c, name))
+
 %}
 

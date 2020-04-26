@@ -40,6 +40,7 @@ mkdir -p low_memory_stems/python2
   python3.6 generate_code.py $SHOULD_BAKE &&
   cp data_structures.cpp build/data_structures.cpp &&
   cp data_structures.h build/data_structures.h &&
+  cp generic_data_structures.h build/generic_data_structures.h &&
   cp fast_dict_keys.i build/fast_dict_keys.i &&
   cd build/ &&
   (
@@ -63,7 +64,7 @@ mkdir -p low_memory_stems/python2
   ) &&
   echo "SHARED COMPILING" &&
   g++ -std=c++98 -O3 -c -fpic generated.h generated.cpp &&
-  g++ -std=c++98 -O3 -c -fpic data_structures.h generated.h baked.h data_structures.cpp &&
+  g++ -std=c++98 -O3 -c -fpic generic_data_structures.h data_structures.h generated.h baked.h data_structures.cpp &&
   (
     (
       echo "MAKING PYTHON 3"
@@ -78,16 +79,16 @@ mkdir -p low_memory_stems/python2
       mv fast_dict_keys.py ../python3/fast_dict_keys.py &&
       touch ../python3/__init__.py
     )
-    (
-      echo "MAKING PYTHON 2"
-      CONFIG_PY2=$(python2.7-config --includes)
-      swig -c++ -python fast_dict_keys.i &&
-      g++ -std=c++98 -O3 -c -fpic fast_dict_keys_wrap.cxx $CONFIG_PY2 &&
-      g++ -std=c++98 -O3 -shared -o _fast_dict_keys.so fast_dict_keys_wrap.o generated.o data_structures.o baked.a &&
-      mv _fast_dict_keys.so ../python2/_fast_dict_keys.so &&
-      mv fast_dict_keys.py ../python2/fast_dict_keys.py &&
-      touch ../python2/__init__.py
-    )
+    #(
+    #  echo "MAKING PYTHON 2"
+    #  CONFIG_PY2=$(python2.7-config --includes)
+    #  swig -c++ -python fast_dict_keys.i &&
+    #  g++ -std=c++98 -O3 -c -fpic fast_dict_keys_wrap.cxx $CONFIG_PY2 &&
+    #  g++ -std=c++98 -O3 -shared -o _fast_dict_keys.so fast_dict_keys_wrap.o generated.o data_structures.o baked.a &&
+    #  mv _fast_dict_keys.so ../python2/_fast_dict_keys.so &&
+    #  mv fast_dict_keys.py ../python2/fast_dict_keys.py &&
+    #  touch ../python2/__init__.py
+    #)
   )
 )
 echo "DONE"

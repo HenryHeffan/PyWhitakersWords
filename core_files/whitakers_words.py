@@ -10,7 +10,7 @@ from core_files import searcher
 
 class WWPOSFormater:  # but everyone that inherit from this must also inherit for POSFormater
     def format_infl_metadata(self, metadata: Tuple[InflectionAge, InflectionFrequency]) -> str:
-        age, freq = metadata
+        age, freq = metadata[0], metadata[1]
         age_str = {InflectionAge.Always: "",
                    InflectionAge.Archaic: "  Archaic ",
                    InflectionAge.Early: "  Early   ",
@@ -173,9 +173,9 @@ class WWVerbFormater(VerbFormater, WWPOSFormater):
             form=pad_to_len(infl.make_split_word_form(word), 21),
             conj=conj,
             conj_var=conj_var,
-            case=pad_to_len(Case.str_val(infl.supine_entry.case).upper(), 3),
-            number=Number.str_val(infl.supine_entry.number).upper(),
-            gender=Gender.str_val(infl.supine_entry.gender).upper(),
+            case=pad_to_len(Case.str_val(infl.supine_data.case).upper(), 3),
+            number=Number.str_val(infl.supine_data.number).upper(),
+            gender=Gender.str_val(infl.supine_data.gender).upper(),
         )
 
     def infl_entry_line_participle(self, dic: DictionaryKey, infl: InflectionRule, word: str) -> str:
@@ -187,12 +187,12 @@ class WWVerbFormater(VerbFormater, WWPOSFormater):
             form=pad_to_len(infl.make_split_word_form(word), 21),
             conj=conj,
             conj_var=conj_var,
-            case=pad_to_len(Case.str_val(infl.participle_entry.case).upper(), 3),
-            number=Number.str_val(infl.participle_entry.number).upper(),
-            gender=Gender.str_val(infl.participle_entry.gender).upper(),
-            tense=pad_to_len(Tense.str_val(infl.participle_entry.tense).upper(), 4),
+            case=pad_to_len(Case.str_val(infl.participle_data.case).upper(), 3),
+            number=Number.str_val(infl.participle_data.number).upper(),
+            gender=Gender.str_val(infl.participle_data.gender).upper(),
+            tense=pad_to_len(Tense.str_val(infl.participle_data.tense).upper(), 4),
             voice=pad_to_len(
-                Voice.str_val(infl.participle_entry.voice).upper() if dic.verb_data.verb_kind != VerbKind.Dep else "", 7),
+                Voice.str_val(infl.participle_data.voice).upper() if dic.verb_data.verb_kind != VerbKind.Dep else "", 7),
         )
 
     def dic_entry_line(self, dic: DictionaryKey) -> str:
@@ -649,8 +649,9 @@ class WWFormater(searcher.Formater):
 
         return "".join(output)
 
-def init(path: str, no_cache: bool=False, fast: bool = True) -> Tuple[OldStyle_DICTLINE_Lexicon, WWFormater]:
-    WW_LEXICON = (BakedLexicon("BAKED_WW") if fast else OldStyle_DICTLINE_Lexicon("DataFiles/DICTLINE.txt"))
+def init(path: str, no_cache: bool=False, fast: bool = True, short: bool = False) -> Tuple[OldStyle_DICTLINE_Lexicon, WWFormater]:
+    if fast: assert not short
+    WW_LEXICON = (BakedLexicon("BAKED_WW") if fast else OldStyle_DICTLINE_Lexicon("DataFiles/DICTLINE.txt", short=short))
     WW_LEXICON.load(path)
 
     WW_FORMATER = WWFormater(WW_LEXICON)

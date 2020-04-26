@@ -1,30 +1,44 @@
 # from memory_profiler import profile
 # @profile
 
+from time import time
+s = time()
+
 def run():
+    global s
     from core_files.searcher import get_matches
     PATH="/home/henry/Desktop/PyWhitakersWords/"
 
     import core_files.whitakers_words as ww
     import core_files.joined_formater_html as jd
+    from low_memory_stems.fast_dict_keys import get_lib
+    print("imported", time() - s)
     J_LEX, J_FORM = jd.init(PATH) #, load_html_def_dict=True)
     WW_LEX, WW_FORM = ww.init(PATH)
+    print("setup", time() - s)
 
     for word in ["abacus", "abacti", "abbatissa", "abbatizo", "fato", "prougus", "hi", "a", "qui", "quicumque", "quibus", "praecanto", ""] + \
                 ("arma virumque cano troiai qui primus ab oris italiam fato prougus et litora livina"
                  " multi quoque passus et multa bello iamque dum".split(" ")):
-        # print(word)
+        print(time() - s)
+        s = time()
         J_FORM.display_entry_query(get_matches(J_LEX, word))
         # print(">{}<".format(get_matches(J_LEX, word).unsyncopated_form_groups[0].lemma.extra_def))
         WW_FORM.display_entry_query(get_matches(WW_LEX, word))
     for word in ["qui", "quae", "quod", "quidam"]:
-        print(word, ":", WW_FORM.dictionary_keyword(get_matches(WW_LEX, word).unsyncopated_form_groups[0].lemma.dictionary_keys[0]))
-    print(WW_FORM.display_entry_query(get_matches(WW_LEX, "qui")))
-    assert(len(get_matches(WW_LEX, "qui").unsyncopated_form_groups) >= 1)
+        pass
+        # print(word, ":", WW_FORM.dictionary_keyword(get_matches(WW_LEX, word).unsyncopated_form_groups[0].lemma.dictionary_keys[0]))
+    # print(WW_FORM.display_entry_query(get_matches(WW_LEX, "qui")))
+    # assert(len(get_matches(WW_LEX, "qui").unsyncopated_form_groups) >= 1)
 
 run()
 
-
+# l = get_lib()
+# l.BAKED_WW_INFL_RULES.get_interjection_inflection_rule()
+# print("DOIG ADV")
+# l.BAKED_WW_INFL_RULES.get_adverb_inflection_rule(0, 0)
+# print("DOING PART")
+# l.BAKED_WW_INFL_RULES.get_participle_inflection_rule(0, 0,0 ,0 ,0 ,0)
 # aliqu   alicu   PRON   _023678 INDEF   *aliquis
 #
 # aliqu   alicu   PRON   _013678 ADJECT  *aliqui

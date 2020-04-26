@@ -283,18 +283,18 @@ class JVerbFormater(VerbFormater, JPOSFormater):
 
     def infl_entry_line_suppine(self, dic: DictionaryKey, infl: InflectionRule, word: str) -> str:
         return "supine {case} {number} {gender}".format(
-            case=Case.str_val(infl.supine_entry.case).lower(),
-            number=Number.alt_str_val(infl.supine_entry.number),
-            gender=Gender.alt_str_val(infl.supine_entry.gender),
+            case=Case.str_val(infl.supine_data.case).lower(),
+            number=Number.alt_str_val(infl.supine_data.number),
+            gender=Gender.alt_str_val(infl.supine_data.gender),
         )
 
     def infl_entry_line_participle(self, dic: DictionaryKey, infl: InflectionRule, word: str) -> str:
         return "participle {case} {number} {gender} {tense} {voice}".format(
-            case=Case.str_val(infl.participle_entry.case).lower(),
-            number=Number.alt_str_val(infl.participle_entry.number),
-            gender=Gender.alt_str_val(infl.participle_entry.gender),
-            tense=Tense.str_val(infl.participle_entry.tense).lower(),
-            voice=Voice.alt_str_val(infl.participle_entry.voice) if dic.verb_data.verb_kind != VerbKind.Dep else "deponent",
+            case=Case.str_val(infl.participle_data.case).lower(),
+            number=Number.alt_str_val(infl.participle_data.number),
+            gender=Gender.alt_str_val(infl.participle_data.gender),
+            tense=Tense.str_val(infl.participle_data.tense).lower(),
+            voice=Voice.alt_str_val(infl.participle_data.voice) if dic.verb_data.verb_kind != VerbKind.Dep else "deponent",
         )
 
     def get_extra_info_spot(self, dic: DictionaryKey) -> str:
@@ -525,7 +525,9 @@ class JFormater(searcher.Formater):
 def init(path: str,
          fast: bool = True,
          load_html_def_dict: bool = False,
-         las_id_to_content: Optional[Callable[[str], str]]=None) -> Tuple[NewStyle_Json_Lexicon, JFormater]:
+         las_id_to_content: Optional[Callable[[str], str]]=None,
+         short: bool = False) -> Tuple[NewStyle_Json_Lexicon, JFormater]:
+    if fast: assert not short
     # One of three should be the case
     # BOTH load_html_def_dict == False and decode_func == None, then do nothing
     # BOTH load_html_def_dict == True and decode_func == None, then load REF_DEF_TABLE.txt and return decoded from this
@@ -542,7 +544,7 @@ def init(path: str,
 
     J_LEX = (BakedLexicon("BAKED_JOINED")
              if fast else
-             NewStyle_Json_Lexicon("GeneratedFiles/JOINED_ONLY_REF_DEF.txt"))  #"GeneratedFiles/JOINED.txt" if not self.ref_def else
+             NewStyle_Json_Lexicon("GeneratedFiles/JOINED_ONLY_REF_DEF.txt", short=short))  #"GeneratedFiles/JOINED.txt" if not self.ref_def else
     J_LEX.load(path)
 
     return J_LEX, JFormater(J_LEX, las_id_to_content)
