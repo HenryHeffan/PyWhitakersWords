@@ -179,8 +179,6 @@ public:
     const InflectionRule *conjunction_rule;
     const InflectionRule *interjection_rule;
 
-
-
     BakedInflectionRuleCollection(const HashTable<InflectionRule> ending_rule_map,
                                   const BlockedArrayView<InflectionRule> inflection_rules,
                                   const InflectionRule **noun_rules,
@@ -195,78 +193,77 @@ public:
                                   const InflectionRule *interjection_rule);
 
 
-     const InflectionRule * get_noun_inflection_rule(ENUM_VAR declention,
-                                              ENUM_VAR declention_varient,
-                                              ENUM_VAR gender,
-                                              ENUM_VAR _case,
-                                              ENUM_VAR number) const
+    const InflectionRule * get_noun_inflection_rule(ENUM_VAR declention,
+                                                    ENUM_VAR declention_varient,
+                                                    ENUM_VAR gender,
+                                                    ENUM_VAR _case,
+                                                    ENUM_VAR number) const
     {
-        return this->noun_rules[(((declention * 10 + declention_varient) * 10 +
-                                gender) * MAX_Gender + _case) * MAX_Case + number];
+        return this->noun_rules[(((declention * 10 + declention_varient) * MAX_Gender + gender) * MAX_Case + _case) * MAX_Number + number];
     }
 
-     const InflectionRule *get_number_inflection_rule(ENUM_VAR declention,
-                                               ENUM_VAR declention_varient,
-                                               ENUM_VAR gender,
-                                               ENUM_VAR _case,
-                                               ENUM_VAR number,
-                                               ENUM_VAR number_kind) const
+    const InflectionRule *get_number_inflection_rule(ENUM_VAR declention,
+                                                     ENUM_VAR declention_varient,
+                                                     ENUM_VAR gender,
+                                                     ENUM_VAR _case,
+                                                     ENUM_VAR number,
+                                                     ENUM_VAR number_kind) const
     {
-        return this->number_rules[((((declention * 10 + declention_varient) * 10 + gender) * MAX_Gender +
-                                   _case) * MAX_Case + number) * MAX_Number + number_kind];
+        return this->number_rules[((((declention * 10 + declention_varient) * MAX_Gender + gender) * MAX_Case +
+                                   _case) * MAX_Number + number) * MAX_NumberKind + number_kind];
     }
 
-     const InflectionRule * get_pronoun_inflection_rule(ENUM_VAR declention,
-                                                 ENUM_VAR declention_varient,
-                                                 ENUM_VAR gender,
-                                                 ENUM_VAR _case,
-                                                 ENUM_VAR number) const
+    const InflectionRule * get_pronoun_inflection_rule(ENUM_VAR declention,
+                                                       ENUM_VAR declention_varient,
+                                                       ENUM_VAR gender,
+                                                       ENUM_VAR _case,
+                                                       ENUM_VAR number) const
     {
-        return this->pronoun_rules[(((declention * 10 + declention_varient) * 10 + gender) * MAX_Gender +
-                                   _case) * MAX_Case + number];
+        return this->pronoun_rules[(((declention * 10 + declention_varient) * MAX_Gender + gender) * MAX_Case +
+                                   _case) * MAX_Number + number];
     }
 
-     const InflectionRule * get_adjective_inflection_rule(ENUM_VAR declention,
-                                                   ENUM_VAR declention_varient,
-                                                   ENUM_VAR gender,
-                                                   ENUM_VAR _case,
-                                                   ENUM_VAR number,
-                                                   ENUM_VAR adjective_kind) const
+    const InflectionRule * get_adjective_inflection_rule(ENUM_VAR declention,
+                                                         ENUM_VAR declention_varient,
+                                                         ENUM_VAR gender,
+                                                         ENUM_VAR _case,
+                                                         ENUM_VAR number,
+                                                         ENUM_VAR adjective_kind) const
     {
-        return this->adjective_rules[((((declention * 10 + declention_varient) * 10 + gender) * MAX_Gender +
-                                     _case) * MAX_Case + number) * MAX_Number + adjective_kind];
+        return this->adjective_rules[((((declention * 10 + declention_varient) * MAX_Gender + gender) * MAX_Case +
+                                     _case) * MAX_Number + number) * MAX_AdjectiveKind + adjective_kind];
     }
 
-     const InflectionRule *get_verb_inflection_rule(ENUM_VAR conjugation,
-                                             ENUM_VAR conjugation_variant,
-                                             ENUM_VAR number,
-                                             ENUM_VAR person,
-                                             ENUM_VAR voice,
-                                             ENUM_VAR tense,
-                                             ENUM_VAR mood) const
-    {
-        return this->verb_rules[(((((conjugation * 10 + conjugation_variant) * 10 + number) * MAX_Number +
-                                person) * MAX_Person + voice) * MAX_Voice + tense) * MAX_Tense + mood];
-    }
-
-     const InflectionRule *get_participle_inflection_rule(ENUM_VAR conjugation,
+    const InflectionRule *get_verb_inflection_rule(ENUM_VAR conjugation,
                                                    ENUM_VAR conjugation_variant,
                                                    ENUM_VAR number,
-                                                   ENUM_VAR _case,
+                                                   ENUM_VAR person,
                                                    ENUM_VAR voice,
-                                                   ENUM_VAR tense) const
+                                                   ENUM_VAR tense,
+                                                   ENUM_VAR mood) const
     {
-        return this->participle_rules[((((conjugation * 10 + conjugation_variant) * 10 + number) * MAX_Number +
-                                      _case) * MAX_Case + voice) * MAX_Voice + tense];
+        return this->verb_rules[(((((conjugation * 10 + conjugation_variant) * MAX_Number + number) * MAX_Person +
+                                person) * MAX_Voice + voice) * MAX_Tense + tense) * MAX_Mood + mood];
     }
 
-     const InflectionRule *get_adverb_inflection_rule(ENUM_VAR adjective_kind_key,
+    const InflectionRule *get_participle_inflection_rule(ENUM_VAR conjugation,
+                                                         ENUM_VAR conjugation_variant,
+                                                         ENUM_VAR number,
+                                                         ENUM_VAR _case,
+                                                         ENUM_VAR voice,
+                                                         ENUM_VAR tense) const
+    {
+        return this->participle_rules[((((conjugation * 10 + conjugation_variant) * MAX_Number + number) * MAX_Case +
+                                      _case) * MAX_Voice + voice) * MAX_Tense + tense];
+    }
+
+    const InflectionRule *get_adverb_inflection_rule(ENUM_VAR adjective_kind_key,
                                                ENUM_VAR adjective_kind_output) const
     {
         return this->adverb_rules[adjective_kind_key * MAX_AdjectiveKind + adjective_kind_output];
     };
 
-     const InflectionRule *get_preposition_inflection_rule() const
+    const InflectionRule *get_preposition_inflection_rule() const
     {
         return this->preposition_rule;
     };

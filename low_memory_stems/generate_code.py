@@ -671,7 +671,7 @@ def add_baked_inflection_rules(d, name):
     # const InflectionRule *participle_rules[10][10][MAX_Number][MAX_Case][MAX_Voice][MAX_Tense];
     adverb_rules = [[
         ref_str(d.get_adverb_inflection_rule(adj_kind1, adj_kind2))
-        for adj_kind1 in AdjectiveKind] for adj_kind2 in AdjectiveKind]
+        for adj_kind2 in AdjectiveKind] for adj_kind1 in AdjectiveKind]
     # const InflectionRule *adverb_rules[MAX_AdjectiveKind][MAX_AdjectiveKind];
     preposition_rule = ref_str(d.get_preposition_inflection_rule())
     conjunction_rule = ref_str(d.get_conjunction_inflection_rule())
@@ -682,6 +682,13 @@ def add_baked_inflection_rules(d, name):
     #                                       name.upper() + "_BAKED_NOUN_RULES",
     #                                       noun_rules)
     flatten = lambda l: [item for sublist in l for item in flatten(sublist)] if isinstance(l[0], list) else l
+
+    # print(len(flatten(noun_rules[0])), len(flatten(noun_rules[1][0])), len(flatten(noun_rules[1][1][0]))
+    #       , len(flatten(noun_rules[1][1][1][0])))
+    # print(flatten(noun_rules[1][1][1]))
+    # print(noun_rules[1][1][1])
+    # ,"\n",noun_rules[1][1][1],"\n",noun_rules[1][1][2])  #, len(flatten(adverb_rules)), [len(flatten(sublist)) for sublist in adverb_rules])
+    # 0/0
     baked_output.insert_vector("InflectionRule *",
                                name.upper() + "_BAKED_NOUN_RULES",
                                flatten(noun_rules), lambda s: s)
@@ -790,7 +797,7 @@ def add_baked_inflection_rules(d, name):
     #     lemmas = lemmata_array_st
     # ))
 
-short=False
+short=True
 
 from core_files.whitakers_words import init
 ww, _ = init(PATH, fast=False, short=short)

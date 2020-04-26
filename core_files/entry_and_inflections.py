@@ -734,7 +734,7 @@ class BakedLexicon(NormalExceptInflLexicon):
         return self.infl_object.ending_rule_map
 
     def get_noun_inflection_rule(self, declention: DeclentionType, declention_varient: DeclentionSubtype, gender: Gender, case: Case, number: Number) -> Optional[InflectionRule]:
-        return self.infl_object.get_noun_inflection_rule(declention, declention_varient, gender, case, number)
+        return self.infl_object.get_noun_inflection_rule(int(declention), int(declention_varient), int(gender), int(case), int(number))
 
     def get_number_inflection_rule(self, declention: DeclentionType, declention_varient: DeclentionSubtype, gender: Gender, case: Case, number: Number, number_kind: NumberKind) -> Optional[InflectionRule]:
         return self.infl_object.get_number_inflection_rule(declention, declention_varient, gender, case, number, number_kind)

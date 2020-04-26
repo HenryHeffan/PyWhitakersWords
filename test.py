@@ -28,7 +28,7 @@ def run():
     for word in ["qui", "quae", "quod", "quidam"]:
         pass
         # print(word, ":", WW_FORM.dictionary_keyword(get_matches(WW_LEX, word).unsyncopated_form_groups[0].lemma.dictionary_keys[0]))
-    # print(WW_FORM.display_entry_query(get_matches(WW_LEX, "qui")))
+    print(WW_FORM.display_entry_query(get_matches(WW_LEX, "abacus")))
     # assert(len(get_matches(WW_LEX, "qui").unsyncopated_form_groups) >= 1)
 
 run()
